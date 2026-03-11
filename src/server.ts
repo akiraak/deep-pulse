@@ -31,7 +31,12 @@ const server = http.createServer(async (req, res) => {
     // 個別記事: /articles/<filename>
     const articleMatch = pathname.match(/^\/articles\/(.+)$/);
     if (articleMatch) {
-      const filename = articleMatch[1];
+      let filename = articleMatch[1];
+
+      // .html → .md に変換（静的ビルドとの互換性）
+      if (filename.endsWith(".html")) {
+        filename = filename.replace(/\.html$/, ".md");
+      }
 
       // パストラバーサル防止
       if (filename.includes("..") || filename.includes("/")) {

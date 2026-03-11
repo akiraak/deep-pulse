@@ -14,6 +14,7 @@ npm install          # 依存パッケージのインストール
 npm run serve        # HTML サーバー起動 (http://localhost:3000)
 npm run build        # TypeScript コンパイル
 npm start            # コンパイル済みコードの実行
+npm run build:site   # 静的サイトビルド (dist_site/ に出力)
 npm run lint         # ESLint
 npm run format       # Prettier
 ```
@@ -23,6 +24,8 @@ npm run format       # Prettier
 - `src/index.ts` — エントリーポイント。サーバーを起動する
 - `src/render.ts` — Markdown → HTML 変換（marked 使用）
 - `src/server.ts` — HTTP サーバー。記事一覧・個別記事を HTML で配信
+- `scripts/build_static.ts` — 静的サイトビルド。GitHub Pages 用
+- `.github/workflows/pages.yml` — push 時に GitHub Pages へ自動デプロイ
 
 ## Article Generation Rules
 

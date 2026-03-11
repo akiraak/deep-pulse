@@ -120,7 +120,9 @@ export async function listArticles(): Promise<ArticleEntry[]> {
 }
 
 /** 記事一覧の HTML を生成 */
-export async function renderIndex(): Promise<string> {
+export async function renderIndex(
+  basePath = "/articles",
+): Promise<string> {
   const articles = await listArticles();
 
   if (articles.length === 0) {
@@ -131,10 +133,10 @@ export async function renderIndex(): Promise<string> {
   }
 
   const items = articles
-    .map(
-      (a) =>
-        `<li><span class="date">${a.date}</span><a href="/articles/${encodeURIComponent(a.filename)}">${a.title}</a></li>`,
-    )
+    .map((a) => {
+      const href = `${basePath}/${encodeURIComponent(a.filename.replace(/\.md$/, ".html"))}`;
+      return `<li><span class="date">${a.date}</span><a href="${href}">${a.title}</a></li>`;
+    })
     .join("\n");
 
   return wrapHtml(
