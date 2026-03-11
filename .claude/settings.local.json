@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version && npm --version)",
+      "Bash(which node:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
