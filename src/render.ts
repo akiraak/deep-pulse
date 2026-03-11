@@ -53,6 +53,20 @@ const CSS = `
   .article-list .date { color: #777; margin-right: 10px; font-size: 0.9em; font-style: italic; }
   .article-list a { color: #1c1c1c; text-decoration: none; font-weight: 700; font-size: 1.1em; border-bottom: none; }
   .article-list a:hover { color: #8b0000; }
+  .site-header {
+    border-bottom: 3px double #2c2c2c; margin-bottom: 2rem; padding-bottom: 0.6rem;
+  }
+  .site-header .site-name {
+    font-size: 1.6rem; font-weight: 900; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #1c1c1c; text-decoration: none; border-bottom: none;
+  }
+  .site-header .site-name:hover { color: #8b0000; }
+  .breadcrumb {
+    font-size: 0.85rem; color: #777; margin-top: 0.3rem;
+  }
+  .breadcrumb a { color: #777; border-bottom: 1px dotted #aaa; }
+  .breadcrumb a:hover { color: #8b0000; border-bottom-style: solid; }
+  .breadcrumb .sep { margin: 0 0.4em; }
   @media (max-width: 600px) {
     body { padding: 1rem; font-size: 0.93rem; max-width: 100%; }
     h1 { font-size: 1.6rem; }
@@ -60,7 +74,18 @@ const CSS = `
   }
 `;
 
-function wrapHtml(title: string, body: string): string {
+interface WrapOptions {
+  title: string;
+  body: string;
+  indexHref?: string;
+  breadcrumb?: string;
+}
+
+function wrapHtml({ title, body, indexHref = "/", breadcrumb }: WrapOptions): string {
+  const breadcrumbHtml = breadcrumb
+    ? `<div class="breadcrumb"><a href="${indexHref}">記事一覧</a><span class="sep">/</span>${breadcrumb}</div>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -70,6 +95,10 @@ function wrapHtml(title: string, body: string): string {
   <style>${CSS}</style>
 </head>
 <body>
+<header class="site-header">
+  <a href="${indexHref}" class="site-name">deep-pulse</a>
+  ${breadcrumbHtml}
+</header>
 ${body}
 </body>
 </html>`;
@@ -125,11 +154,14 @@ export async function renderIndex(
 ): Promise<string> {
   const articles = await listArticles();
 
+  const indexHref = basePath === "/articles" ? "/" : "./";
+
   if (articles.length === 0) {
-    return wrapHtml(
-      "deep-pulse",
-      "<h1>deep-pulse</h1><p>記事がありません。先にニュースを検索して記事を生成してください。</p>",
-    );
+    return wrapHtml({
+      title: "deep-pulse",
+      body: "<p>記事がありません。先にニュースを検索して記事を生成してください。</p>",
+      indexHref,
+    });
   }
 
   const items = articles
@@ -139,14 +171,18 @@ export async function renderIndex(
     })
     .join("\n");
 
-  return wrapHtml(
-    "deep-pulse — 記事一覧",
-    `<h1>deep-pulse — 記事一覧</h1>\n<ul class="article-list">\n${items}\n</ul>`,
-  );
+  return wrapHtml({
+    title: "deep-pulse — 記事一覧",
+    body: `<ul class="article-list">\n${items}\n</ul>`,
+    indexHref,
+  });
 }
 
 /** 個別記事の HTML を生成 */
-export async function renderArticle(filename: string): Promise<string | null> {
+export async function renderArticle(
+  filename: string,
+  indexHref = "/",
+): Promise<string | null> {
   const filePath = path.join(OUTPUT_DIR, filename);
   let md: string;
   try {
@@ -155,6 +191,12 @@ export async function renderArticle(filename: string): Promise<string | null> {
     return null;
   }
 
+  const articleTitle = (await extractTitle(filePath)) ?? filename;
   const html = await marked(md);
-  return wrapHtml(filename.replace(/\.md$/, ""), html);
+  return wrapHtml({
+    title: `${articleTitle} — deep-pulse`,
+    body: html,
+    indexHref,
+    breadcrumb: articleTitle,
+  });
 }

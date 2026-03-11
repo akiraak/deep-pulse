@@ -19,7 +19,7 @@ async function build() {
   // 個別記事ページ
   const articles = await listArticles();
   for (const article of articles) {
-    const html = await renderArticle(article.filename);
+    const html = await renderArticle(article.filename, "../");
     if (html) {
       const outName = article.filename.replace(/\.md$/, ".html");
       await writeFile(path.join(ARTICLES_DIR, outName), html, "utf-8");
