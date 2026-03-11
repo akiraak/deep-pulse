@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-deep-pulse は特定のキーワードでニュースを検索し、Claude API で深い考察を加えた記事を Markdown として生成するツール。
+deep-pulse はニュースを深く考察した記事を Markdown として生成し、HTML サーバーで配信するツール。
+記事の生成は Claude Code 上で行い、`output/` ディレクトリに保存する。
 
 ## Commands
 
 ```bash
 npm install          # 依存パッケージのインストール
-npm run dev -- <keyword> [maxResults]  # 開発実行（tsx）
+npm run serve        # HTML サーバー起動 (http://localhost:3000)
 npm run build        # TypeScript コンパイル
 npm start            # コンパイル済みコードの実行
 npm run lint         # ESLint
@@ -19,19 +20,38 @@ npm run format       # Prettier
 
 ## Architecture
 
-パイプライン: **検索 → 分析 → 出力**
+- `src/index.ts` — エントリーポイント。サーバーを起動する
+- `src/render.ts` — Markdown → HTML 変換（marked 使用）
+- `src/server.ts` — HTTP サーバー。記事一覧・個別記事を HTML で配信
 
-- `src/index.ts` — エントリーポイント。CLI 引数を受け取りパイプラインを実行
-- `src/search.ts` — Google Custom Search API でニュース検索
-- `src/analyze.ts` — Claude API (Anthropic SDK) でニュースを考察し記事生成
-- `src/output.ts` — 生成記事を `output/` に Markdown ファイルとして保存
-- `src/types.ts` — 共有型定義（SearchConfig, NewsItem, GeneratedArticle）
+## Article Generation Rules
 
-## Environment Variables
+記事は Claude Code がこの画面上で生成し、`output/` に保存する。以下の手順で進める。
 
-`.env.example` を参照。必要な環境変数:
-- `GOOGLE_API_KEY` / `GOOGLE_CSE_ID` — Google Custom Search
-- `ANTHROPIC_API_KEY` — Claude API
+### 手順
+
+1. **テーマ確認** — ユーザーが記事のテーマ・時期・トピックを指定する
+2. **情報収集** — WebSearch / WebFetch を使い、関連するニュース記事・一次情報をできる限り多く収集する
+3. **生成プラン作成** — 収集した情報を元に記事の構成案を `output/YYYY-MM-DD_タイトル_plan.md` として保存し、ユーザーに確認を取る。収集した全ソースの URL をプランファイルに記録すること（コンテキスト圧縮で失われないようにするため）
+4. **記事生成** — プランに基づき `output/YYYY-MM-DD_タイトル.md` として記事を生成する
+
+### 記事のフォーマット
+
+- ファイル名: `YYYY-MM-DD_タイトル.md`（日付は記事の生成日）
+- 記事は日本語で執筆する
+- 以下の観点で深い考察を加えること:
+  - 事実の整理と背景の説明
+  - 複数の視点からの分析
+  - 社会的・経済的影響の考察
+  - 今後の展望
+- Markdown の見出し・箇条書き・引用を適切に使用する
+- 記事中の事実・引用には参照元へのリンクを付ける（インラインリンク）
+- 記事の末尾に「## 参考ソース」セクションを設け、参照した全記事の URL をリスト化する
+
+## Task Management
+
+- タスクは `TODO.md` で管理する
+- コミット前に、完了したタスクを `TODO.md` から `DONE.md` に移動すること
 
 ## Conventions
 
