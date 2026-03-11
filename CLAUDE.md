@@ -22,9 +22,9 @@ npm run format       # Prettier
 ## Architecture
 
 - `src/index.ts` — エントリーポイント。サーバーを起動する
-- `src/render.ts` — Markdown → HTML 変換（marked 使用）
+- `src/render.ts` — Markdown → HTML 変換（marked 使用）。OGP タグ・ヘッダー・パンくず生成を含む
 - `src/server.ts` — HTTP サーバー。記事一覧・個別記事を HTML で配信
-- `scripts/build_static.ts` — 静的サイトビルド。GitHub Pages 用
+- `scripts/build_static.ts` — 静的サイトビルド。GitHub Pages 用。`ogp.png` も `dist_site/` にコピーする
 - `.github/workflows/pages.yml` — push 時に GitHub Pages へ自動デプロイ
 
 ## Article Generation Rules

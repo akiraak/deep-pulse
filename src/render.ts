@@ -6,6 +6,10 @@ import path from "path";
 import { marked } from "marked";
 
 const OUTPUT_DIR = path.resolve("output");
+const SITE_URL = "https://akiraak.github.io/deep-pulse";
+const SITE_NAME = "deep-pulse";
+const SITE_DESCRIPTION = "ニュースを深く考察した記事を配信";
+const OGP_IMAGE = `${SITE_URL}/ogp.png`;
 
 const CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -79,12 +83,17 @@ interface WrapOptions {
   body: string;
   indexHref?: string;
   breadcrumb?: string;
+  description?: string;
+  ogUrl?: string;
 }
 
-function wrapHtml({ title, body, indexHref = "/", breadcrumb }: WrapOptions): string {
+function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl }: WrapOptions): string {
   const breadcrumbHtml = breadcrumb
     ? `<div class="breadcrumb"><a href="${indexHref}">記事一覧</a><span class="sep">/</span>${breadcrumb}</div>`
     : "";
+
+  const desc = description ?? SITE_DESCRIPTION;
+  const url = ogUrl ?? SITE_URL;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -92,6 +101,18 @@ function wrapHtml({ title, body, indexHref = "/", breadcrumb }: WrapOptions): st
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
+  <meta name="description" content="${desc}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${desc}">
+  <meta property="og:type" content="${breadcrumb ? "article" : "website"}">
+  <meta property="og:url" content="${url}">
+  <meta property="og:image" content="${OGP_IMAGE}">
+  <meta property="og:site_name" content="${SITE_NAME}">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${desc}">
+  <meta name="twitter:image" content="${OGP_IMAGE}">
   <style>${CSS}</style>
 </head>
 <body>
@@ -120,6 +141,22 @@ async function extractTitle(filePath: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/** Markdown から最初の本文段落を抽出して description 用テキストにする */
+function extractDescription(md: string): string {
+  const lines = md.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // 見出し・空行・区切り線・リスト・画像をスキップ
+    if (!trimmed || /^#{1,6}\s/.test(trimmed) || trimmed === "---" || /^[-*]\s/.test(trimmed) || /^!\[/.test(trimmed)) {
+      continue;
+    }
+    // Markdownリンク等を除去してプレーンテキストに
+    const plain = trimmed.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "");
+    return plain.length > 200 ? plain.slice(0, 197) + "..." : plain;
+  }
+  return SITE_DESCRIPTION;
 }
 
 /** output/ 内の .md ファイル一覧を取得 */
@@ -192,11 +229,16 @@ export async function renderArticle(
   }
 
   const articleTitle = (await extractTitle(filePath)) ?? filename;
+  const description = extractDescription(md);
+  const htmlName = filename.replace(/\.md$/, ".html");
+  const ogUrl = `${SITE_URL}/articles/${encodeURIComponent(htmlName)}`;
   const html = await marked(md);
   return wrapHtml({
     title: `${articleTitle} — deep-pulse`,
     body: html,
     indexHref,
     breadcrumb: articleTitle,
+    description,
+    ogUrl,
   });
 }
