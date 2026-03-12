@@ -9,7 +9,7 @@ const OUTPUT_DIR = path.resolve("output");
 const SITE_URL = "https://akiraak.github.io/deep-pulse";
 const SITE_NAME = "deep-pulse";
 const SITE_DESCRIPTION = "ニュースを深く考察した記事を配信";
-const OGP_IMAGE = `${SITE_URL}/ogp.png`;
+const OGP_IMAGE = `${SITE_URL}/ogp.jpg`;
 
 const CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }

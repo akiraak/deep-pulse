@@ -28,13 +28,13 @@ async function build() {
   }
 
   // OGP画像をコピー（存在する場合のみ）
-  const ogpSrc = path.resolve("ogp.png");
+  const ogpSrc = path.resolve("ogp.jpg");
   try {
     await access(ogpSrc);
-    await copyFile(ogpSrc, path.join(DIST, "ogp.png"));
-    console.log("コピー: ogp.png");
+    await copyFile(ogpSrc, path.join(DIST, "ogp.jpg"));
+    console.log("コピー: ogp.jpg");
   } catch {
-    console.warn("警告: ogp.png が見つかりません。スキップします。");
+    console.warn("警告: ogp.jpg が見つかりません。スキップします。");
   }
 
   console.log(`\n完了: ${articles.length} 件の記事を dist_site/ に出力しました`);
