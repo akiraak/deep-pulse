@@ -1,7 +1,7 @@
 // 静的サイトビルドスクリプト
 // output/ 内の記事を HTML に変換し、dist_site/ に出力する
 
-import { mkdir, writeFile, copyFile } from "fs/promises";
+import { mkdir, writeFile, copyFile, access } from "fs/promises";
 import path from "path";
 import { renderIndex, renderArticle, listArticles } from "../src/render.js";
 
@@ -27,10 +27,15 @@ async function build() {
     }
   }
 
-  // OGP画像をコピー
+  // OGP画像をコピー（存在する場合のみ）
   const ogpSrc = path.resolve("ogp.png");
-  await copyFile(ogpSrc, path.join(DIST, "ogp.png"));
-  console.log("コピー: ogp.png");
+  try {
+    await access(ogpSrc);
+    await copyFile(ogpSrc, path.join(DIST, "ogp.png"));
+    console.log("コピー: ogp.png");
+  } catch {
+    console.warn("警告: ogp.png が見つかりません。スキップします。");
+  }
 
   console.log(`\n完了: ${articles.length} 件の記事を dist_site/ に出力しました`);
 }
