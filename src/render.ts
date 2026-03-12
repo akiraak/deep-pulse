@@ -52,6 +52,38 @@ const CSS = `
   li p { text-indent: 0; }
   strong { font-weight: 700; }
   hr { border: none; border-top: 1px solid #c0b9a8; margin: 2rem 3rem; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 1.2rem 0;
+    font-size: 0.92rem; line-height: 1.7;
+  }
+  thead { border-bottom: 2px solid #2c2c2c; }
+  th {
+    background: #2c2c2c; color: #faf8f0; font-weight: 700;
+    padding: 0.5rem 0.8rem; text-align: left; letter-spacing: 0.04em;
+    text-indent: 0;
+  }
+  td {
+    padding: 0.55rem 0.8rem; border-bottom: 1px solid #d5cfc0;
+    vertical-align: top; text-indent: 0;
+  }
+  tr:nth-child(even) td { background: rgba(44,44,44,0.03); }
+  tr:hover td { background: rgba(139,0,0,0.04); }
+  td strong { color: #8b0000; }
+  pre {
+    background: #2c2c2c; color: #e8e2d0; border-radius: 4px;
+    padding: 1.2rem 1.5rem; margin: 1.2rem 0; overflow-x: auto;
+    font-size: 0.82rem; line-height: 1.65;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+  }
+  code {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+    font-size: 0.88em;
+  }
+  p code, li code {
+    background: rgba(44,44,44,0.08); padding: 0.15em 0.35em;
+    border-radius: 3px; font-size: 0.85em;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
   .article-list { list-style: none; padding: 0; }
   .article-list li { padding: 14px 0; border-bottom: 1px solid #c0b9a8; }
   .article-list .date { color: #777; margin-right: 10px; font-size: 0.9em; font-style: italic; }
@@ -75,6 +107,9 @@ const CSS = `
     body { padding: 1rem; font-size: 0.93rem; max-width: 100%; }
     h1 { font-size: 1.6rem; }
     p { text-indent: 0; }
+    table { font-size: 0.82rem; display: block; overflow-x: auto; white-space: nowrap; }
+    th, td { padding: 0.4rem 0.55rem; }
+    pre { font-size: 0.72rem; padding: 0.8rem 1rem; }
   }
 `;
 
