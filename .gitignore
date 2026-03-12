@@ -4,3 +4,4 @@ dist_site/
 .env
 .claude/settings.local.json
 output/design_preview/
+tmp/
