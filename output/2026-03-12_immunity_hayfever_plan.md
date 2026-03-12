@@ -49,6 +49,25 @@
 - https://www.env.go.jp/chemi/anzen/kafun/2022_full.pdf
 - https://www.sadanaga.jp/topics/7303/
 
+### 4.5. なぜ都会の方が花粉症が多いのか — スギ林が少ないのに患者が多い矛盾
+- スギ林面積と発症率の不一致データ（東北 vs 関東・東海）
+- 都道府県別ランキング（群馬・山梨・静岡が1位、沖縄14%）
+- アスファルト再飛散問題
+- 排気ガス・PM2.5のアジュバント効果（花粉の8割が破裂）
+- 衛生的すぎる都市環境（アーミッシュの子ども0.6% vs 非農家11.6%）
+- 住環境・食生活・ストレスの都市部特有の要因
+
+**ソース:**
+- https://weathernews.jp/s/topics/202103/150185/
+- https://products.st-c.co.jp/plus/channel/10435/
+- https://www.daikin-streamer.com/article/004.html
+- https://minna-works.com/journal/detail/?id=3521
+- https://toyokeizai.net/articles/-/262745
+- https://www.angfa.jp/health_survey/ranking/
+- https://honkawa2.sakura.ne.jp/7306.html
+- https://www.nature.com/articles/s41598-023-30027-x
+- https://pubmed.ncbi.nlm.nih.gov/10051699/
+
 ### 5. 腸内細菌と花粉症 — お腹の中から花粉症を治す
 - 免疫細胞の60%が腸に集中
 - 花粉症患者の腸内細菌叢の特徴（多様性の減少）
