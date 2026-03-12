@@ -68,6 +68,24 @@
 - https://www.nature.com/articles/s41598-023-30027-x
 - https://pubmed.ncbi.nlm.nih.gov/10051699/
 
+### 4.6. 花粉症になる人とならない人の違い — 遺伝か環境か、それとも両方か
+- 遺伝的要因: 両親ともにアレルギー→発症率50-80%、片親→30-50%、両親なし→10-15%
+- IgE産生能力の個人差: 免疫抑制遺伝子の有無、IgE陽性でも発症は半数未満
+- フィラグリン遺伝子変異と経皮感作
+- HLA-DPB1*05:01遺伝子型と舌下免疫療法の効果予測（福井大学・AMED研究、203人）
+- 双子研究: 遺伝71% vs 環境29%（デンマーク11,750組）
+- 腸内細菌叢の個人差による発症・重症度の違い
+
+**ソース:**
+- https://www.lact-life.co.jp/kafun_cause.html
+- https://kagayaki-cl.jp/column/アレルギー体質は遺伝する？遺伝と環境から読み解く/
+- https://www.annyo.jp/magazine/kafunsho-iden/
+- https://www.mcsg.co.jp/kentatsu/health-care/30991
+- https://www.fukuoka-u.ac.jp/column_list/research2/14/03/27090001.html
+- https://www.amed.go.jp/news/seika/kenkyu/20220405.html
+- https://pubmed.ncbi.nlm.nih.gov/16650971/
+- https://www.env.go.jp/chemi/anzen/kafun/2022_full.pdf
+
 ### 5. 腸内細菌と花粉症 — お腹の中から花粉症を治す
 - 免疫細胞の60%が腸に集中
 - 花粉症患者の腸内細菌叢の特徴（多様性の減少）
