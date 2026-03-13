@@ -194,30 +194,70 @@ function extractDescription(md: string): string {
   return SITE_DESCRIPTION;
 }
 
-/** output/ 内の .md ファイル一覧を取得 */
+/** output/ 内の .md ファイル一覧を取得（トップレベル & サブディレクトリ両対応） */
 export async function listArticles(): Promise<ArticleEntry[]> {
   let files: string[];
   try {
-    files = await readdir(OUTPUT_DIR);
+    files = await readdir(OUTPUT_DIR, { withFileTypes: true }) as unknown as string[];
   } catch {
     return [];
   }
 
-  const mdFiles = files
-    .filter((f) => f.endsWith(".md") && !f.endsWith("_plan.md"))
-    .sort()
-    .reverse();
+  const dirEntries = await readdir(OUTPUT_DIR, { withFileTypes: true });
+  const mdFiles: string[] = [];
+
+  for (const entry of dirEntries) {
+    if (entry.isFile() && entry.name.endsWith(".md") && !entry.name.endsWith("_plan.md")) {
+      // トップレベルの .md ファイル（旧形式）
+      mdFiles.push(entry.name);
+    } else if (entry.isDirectory()) {
+      // サブディレクトリ内の .md ファイル（新形式）
+      try {
+        const subFiles = await readdir(path.join(OUTPUT_DIR, entry.name));
+        for (const sf of subFiles) {
+          if (sf.endsWith(".md") && !sf.endsWith("_plan.md")) {
+            mdFiles.push(sf);
+          }
+        }
+      } catch {
+        // サブディレクトリの読み込み失敗はスキップ
+      }
+    }
+  }
+
+  const uniqueFiles = [...new Set(mdFiles)].sort().reverse();
 
   const entries: ArticleEntry[] = [];
-  for (const filename of mdFiles) {
+  for (const filename of uniqueFiles) {
     const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})_/);
     const date = dateMatch?.[1] ?? "";
+    const resolvedPath = await resolveArticlePath(filename);
     const title =
-      (await extractTitle(path.join(OUTPUT_DIR, filename))) ?? filename;
+      (resolvedPath ? await extractTitle(resolvedPath) : null) ?? filename;
     entries.push({ filename, date, title });
   }
 
   return entries;
+}
+
+/** 記事ファイルの実パスを解決（トップレベル or サブディレクトリ） */
+async function resolveArticlePath(filename: string): Promise<string | null> {
+  // サブディレクトリ内を先にチェック（新形式優先）
+  const baseName = filename.replace(/\.md$/, "");
+  const subDirPath = path.join(OUTPUT_DIR, baseName, filename);
+  try {
+    await readFile(subDirPath, "utf-8");
+    return subDirPath;
+  } catch {
+    // フォールバック: トップレベル
+  }
+  const topLevelPath = path.join(OUTPUT_DIR, filename);
+  try {
+    await readFile(topLevelPath, "utf-8");
+    return topLevelPath;
+  } catch {
+    return null;
+  }
 }
 
 /** 記事一覧の HTML を生成 */
@@ -255,7 +295,8 @@ export async function renderArticle(
   filename: string,
   indexHref = "/",
 ): Promise<string | null> {
-  const filePath = path.join(OUTPUT_DIR, filename);
+  const filePath = await resolveArticlePath(filename);
+  if (!filePath) return null;
   let md: string;
   try {
     md = await readFile(filePath, "utf-8");
