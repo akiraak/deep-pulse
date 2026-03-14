@@ -96,6 +96,7 @@ const CSS = `
   tr:nth-child(even) td { background: rgba(44,44,44,0.03); }
   tr:hover td { background: rgba(139,0,0,0.04); }
   td strong { color: #8b0000; }
+  th a { color: #faf8f0; border-bottom-color: #faf8f0; }
   pre {
     background: #2c2c2c; color: #e8e2d0; border-radius: 4px;
     padding: 1.2rem 1.5rem; margin: 1.2rem 0; overflow-x: auto;
