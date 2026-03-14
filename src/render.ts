@@ -3,7 +3,34 @@
 
 import { readFile, readdir } from "fs/promises";
 import path from "path";
-import { marked } from "marked";
+import { marked, type Tokens } from "marked";
+
+// chart コードブロックを Canvas + Chart.js に変換するカスタムレンダラー
+let chartCounter = 0;
+
+const chartRenderer = {
+  code(token: Tokens.Code): string | false {
+    if (token.lang === "chart") {
+      const id = `deep-pulse-chart-${chartCounter++}`;
+      // JSON の中の HTML エンティティを戻す（marked が &amp; 等にエスケープする場合への対策）
+      const raw = token.text;
+      return `<div style="max-width:800px;margin:1.5rem auto;">
+  <canvas id="${id}"></canvas>
+</div>
+<script>
+(function(){
+  var cfg = ${raw};
+  // デフォルトオプション: レスポンシブ & アスペクト比維持
+  cfg.options = Object.assign({ responsive: true, maintainAspectRatio: true }, cfg.options || {});
+  new Chart(document.getElementById('${id}'), cfg);
+})();
+</script>`;
+    }
+    return false; // chart 以外はデフォルトレンダラーに委譲
+  },
+};
+
+marked.use({ renderer: chartRenderer });
 
 const OUTPUT_DIR = path.resolve("output");
 const SITE_URL = "https://akiraak.github.io/deep-pulse";
@@ -149,6 +176,7 @@ function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl
   <meta name="twitter:description" content="${desc}">
   <meta name="twitter:image" content="${OGP_IMAGE}">
   <style>${CSS}</style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
 <header class="site-header">
@@ -308,6 +336,7 @@ export async function renderArticle(
   const description = extractDescription(md);
   const htmlName = filename.replace(/\.md$/, ".html");
   const ogUrl = `${SITE_URL}/articles/${encodeURIComponent(htmlName)}`;
+  chartCounter = 0;
   const html = await marked(md);
   return wrapHtml({
     title: `${articleTitle} — deep-pulse`,
