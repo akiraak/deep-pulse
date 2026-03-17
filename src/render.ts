@@ -6,7 +6,9 @@ import path from "path";
 import { marked, type Tokens } from "marked";
 
 // chart コードブロックを Canvas + Chart.js に変換するカスタムレンダラー
+// mermaid コードブロックを Mermaid.js 図に変換するカスタムレンダラー
 let chartCounter = 0;
+let mermaidCounter = 0;
 
 const chartRenderer = {
   code(token: Tokens.Code): string | false {
@@ -26,7 +28,13 @@ const chartRenderer = {
 })();
 </script>`;
     }
-    return false; // chart 以外はデフォルトレンダラーに委譲
+    if (token.lang === "mermaid") {
+      const id = `deep-pulse-mermaid-${mermaidCounter++}`;
+      return `<div class="mermaid-wrapper" style="max-width:800px;margin:1.5rem auto;">
+  <pre class="mermaid" id="${id}">${token.text}</pre>
+</div>`;
+    }
+    return false; // chart / mermaid 以外はデフォルトレンダラーに委譲
   },
 };
 
@@ -112,6 +120,11 @@ const CSS = `
     border-radius: 3px; font-size: 0.85em;
   }
   pre code { background: none; padding: 0; font-size: inherit; }
+  pre.mermaid {
+    background: none; color: #1c1c1c; padding: 0; margin: 0;
+    font-family: Georgia, serif; font-size: 1rem; line-height: normal;
+  }
+  .mermaid-wrapper { text-align: center; }
   .article-list { list-style: none; padding: 0; }
   .article-list li { padding: 14px 0; border-bottom: 1px solid #c0b9a8; }
   .article-list .date { color: #777; margin-right: 10px; font-size: 0.9em; font-style: italic; }
@@ -178,6 +191,8 @@ function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl
   <meta name="twitter:image" content="${OGP_IMAGE}">
   <style>${CSS}</style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#f5f0e6',primaryTextColor:'#1c1c1c',primaryBorderColor:'#8b0000',lineColor:'#8b0000',secondaryColor:'#faf8f0',tertiaryColor:'#e8e2d0',fontFamily:'Georgia, serif'}});</script>
 </head>
 <body>
 <header class="site-header">
@@ -338,6 +353,7 @@ export async function renderArticle(
   const htmlName = filename.replace(/\.md$/, ".html");
   const ogUrl = `${SITE_URL}/articles/${encodeURIComponent(htmlName)}`;
   chartCounter = 0;
+  mermaidCounter = 0;
   const html = await marked(md);
   return wrapHtml({
     title: `${articleTitle} — deep-pulse`,
