@@ -1,0 +1,78 @@
+---
+url: https://www.musicman.co.jp/artist/700056
+title: "Bialystocks、新曲「言伝」がTVアニメ「違国日記」EDテーマに決定 7人編成ツアーも開催へ | Musicman"
+---
+
+1.  [[Musicman]{itemprop="name"}](https://www.musicman.co.jp){itemprop="item"}
+2.  [[ニュース]{itemprop="name"}](https://www.musicman.co.jp/news){itemprop="item"}
+3.  [[アーティスト]{itemprop="name"}](https://www.musicman.co.jp/artist){itemprop="item"}
+4.  [[Bialystocks、新曲「言伝」がTVアニメ「違国日記」EDテーマに決定 7人編成ツアーも開催へ]{itemprop="name"}](https://www.musicman.co.jp/artist/700056){itemprop="item"}
+
+-   [![](https://www.musicman.co.jp/wp-content/themes/musicman/img/icons/x.png)](https://x.com/musicman_net){.opa rel="noopener noreferrer" target="_blank"}
+-   [![](https://www.musicman.co.jp/wp-content/themes/musicman/img/icons/line.png)](https://lin.ee/pwa9E5d){.opa rel="noopener noreferrer" target="_blank"}
+-   [![](https://www.musicman.co.jp/wp-content/themes/musicman/img/icons/youtube.png)](https://www.youtube.com/@musicman_ch){.opa rel="noopener noreferrer" target="_blank"}
+-   [![](https://www.musicman.co.jp/wp-content/themes/musicman/img/icons/tiktok.png)](https://www.tiktok.com/@musicman_nusicman){.opa rel="noopener noreferrer" target="_blank"}
+-   [![](https://www.musicman.co.jp/wp-content/themes/musicman/img/icons/spotify.png)](https://open.spotify.com/user/31torbuje35atev3jjv5io6zk77u){.opa rel="noopener noreferrer" target="_blank"}
+
+# Bialystocks、新曲「言伝」がTVアニメ「違国日記」EDテーマに決定 7人編成ツアーも開催へ
+
+[アーティスト]{#content_single_tag_artist}
+
+2025年11月5日 20:05
+
+-   [Bialystocks](https://www.musicman.co.jp/original_tags/bialystocks)
+
+<figure class="wp-caption">
+<img src="https://www.musicman.co.jp/wp-content/uploads/2025/11/1e19d0fa2fe8d301c5f021c0b1a499d1.jpeg" />
+<figcaption>Bialystocks 2+5 ツアービジュアル</figcaption>
+</figure>
+
+Bialystocksの新曲「言伝（ことづて）」が、2026年1月より放送が開始されるTVアニメ「違国日記」のエンディングテーマに起用された。
+
+**Musicmanのプレイリストを再生** [![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjMwIiB2aWV3Ym94PSIwIDAgNjQgNjQiIHdpZHRoPSIzMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMzIgMEMxNC4zIDAgMCAxNC4zMzcgMCAzMmMwIDE3LjcgMTQuMzM3IDMyIDMyIDMyIDE3LjcgMCAzMi0xNC4zMzcgMzItMzJTNDkuNjYzIDAgMzIgMHptMTQuNjggNDYuMTg0Yy0uNTczLjk1Ni0xLjc5NyAxLjIyMy0yLjc1My42NS03LjUzMi00LjU4OC0xNi45NzUtNS42Mi0yOC4xNC0zLjA5Ny0xLjA3LjIzLTIuMTQtLjQyLTIuMzctMS40OXMuNDItMi4xNCAxLjQ5LTIuMzdjMTIuMTk2LTIuNzkgMjIuNjctMS42MDYgMzEuMDgyIDMuNTU2YTIgMiAwIDAgMSAuNjg4IDIuNzUzem0zLjktOC43MTdjLS43MjYgMS4xODUtMi4yNTYgMS41My0zLjQ0Ljg0LTguNjAyLTUuMjc2LTIxLjcxNi02LjgwNS0zMS44ODUtMy43NDctMS4zMzguMzgyLTIuNzE0LS4zNDQtMy4wOTctMS42NDQtLjM4Mi0xLjMzOC4zNDQtMi43MTQgMS42ODItMy4wOTcgMTEuNjIyLTMuNTE3IDI2LjA3NC0xLjgzNSAzNS45NzYgNC4yNDQgMS4xNDcuNjg4IDEuNDkgMi4yMTcuNzY1IDMuNDAzem0uMzQ0LTkuMWMtMTAuMzIzLTYuMTE3LTI3LjMzNi02LjY5LTM3LjItMy43MDgtCjEuNTY4LjQ5Ny0zLjI1LS40Mi0zLjc0Ny0xLjk4OHMuNDItMy4yNSAxLjk4OC0zLjc0N2MxMS4zMTctMy40NCAzMC4xMjctMi43NTMgNDEuOTggNC4yODIgMS40MTUuODQgMS44NzMgMi42NzYgMS4wMzIgNC4wOS0uNzY1IDEuNDUzLTIuNjM4IDEuOTEyLTQuMDUzIDEuMDd6IiBmaWxsPSIjMWVkNzYwIj48L3BhdGg+PC9zdmc+)](%0Ahttps://open.spotify.com/user/31torbuje35atev3jjv5io6zk77u?si=964b277613ff42f6%0A) [![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjMwcHgiIHZpZXdib3g9IjAgMCA3MiA3MiIgd2lkdGg9IjMwcHgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhcmdyYWRpZW50IGdyYWRpZW50dHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtNjkzLjk5KSIgZ3JhZGllbnR1bml0cz0idXNlclNwYWNlT25Vc2UiIGlkPSJhIiB4MT0iMzYiIHgyPSIzNiIgeTE9Ijc2NS43MSIgeTI9IjY5NS41NCI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmEyMzNiIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZmI1Yzc0Ij48L3N0b3A+PC9saW5lYXJncmFkaWVudD48L2RlZnM+PHBhdGggZD0iTTcyIDIyLjUydi0yLjU4YzAtLjcyLS4wMS0xLjQ1LS4wMy0yLjE3LS4wNC0xLjU4LS4xNC0zLjE3LS40Mi00LjczLS4yOC0xLjU4LS43NS0zLjA2LTEuNDgtNC41LS43Mi0xLjQxLTEuNjYtMi43MS0yLjc4LTMuODNzLTIuNDItMi4wNi0zLjgzLTIuNzhBMTUuOSAxNS45IDAgMCAwIDU4Ljk3LjQ1QzU3LjQxLjE3IDU1LjgyLjA4IDU0LjI0LjAzTDUyLjA2IDBIMTkuOTRjLS43MiAwLTEuNDUgMC0yLjE3LjAzLTEuNTguMDQtMy4xNy4xNC00LjczLjQyLTEuNTguMjktMy4wNi43NS00LjQ5IDEuNDktMS40Mi43Mi0yLjcxIDEuNjYtMy44MyAyLjc4UzIuNjUgNy4xMyAxLjkzIDguNTVDMS4yIDkuOTkuNzMgMTEuNDYuNDUgMTMuMDUuMTcgMTQuNjEuMDggMTYuMi4wMyAxNy43OGMwIC43Mi0uMDIgMS40NC0uMDMgMi4xNnYzMi4xMWMwIC43MiAwIDEuNDUuMDMgMi4xNy4wNCAxLjU4LjE0IDMuMTcuNDIgNC43My4yOCAxLjU4Ljc1IDMuMDYgMS40OCA0LjUuNzIgMS40MSAxLjY2IDIuNzEgMi43OCAzLjgzczIuNDIgMi4wNiAzLjgzIDIuNzhhMTUuOSAxNS45IDAgMCAwIDQuNDkgMS40OGMxLjU2LjI4IDMuMTUuMzcgNC43My40Mi43Mi4wMiAxLjQ1LjAzIDIuMTcuMDMuODYuMDEgMS43MiAwIDIuNTggMGgyOS41M2MuNzIgMCAxLjQ1LS4wMSAyLjE3LS4wMyAxLjU4LS4wNCAzLjE3LS4xNCA0LjczLS40MiAxLjU4LS4yOCAzLjA2LS43NSA0LjQ5LTEuNDggMS40MS0uNzIgMi43MS0xLjY2IDMuODMtMi43OHMyLjA2LTIuNDEgMi43OC0zLjgzYy43My0xLjQ0IDEuMi0yLjkxIDEuNDgtNC41LjI4LTEuNTYuMzctMy4xNS40Mi00LjczLjAyLS43Mi4wMy0xLjQ1LjAzLTIuMTcuMDEtLjg2IDAtMS43MiAwLTIuNTh6IiBzdHlsZT0iZmlsbC1ydWxlOiBldmVub2RkOyBmaWxsOiB1cmwoJiMzOTsjYSYjMzk7KTsiPjwvcGF0aD48cGF0aCBkPSJNNTAuOSAxMWMtLjE3LjAyLTEuNzIuMjktMS45MS4zM2wtMjEuNCA0LjMyaC0uMDFjLS41Ni4xMi0xIC4zMi0xLjMzLjYtLjQxLjM0LS42My44My0uNzIgMS4zOS0uMDIuMTItLjA1LjM2LS4wNS43MnYyNi43OGMwIC42My0uMDUgMS4yMy0uNDcgMS43NXMtLjk1LjY3LTEuNTYuOGMtLjQ3LjA5LS45My4xOS0xLjQuMjgtMS43Ny4zNi0yLjkyLjYtMy45NiAxLTEgLjM5LTEuNzQuODgtMi4zNCAxLjUtMS4xOCAxLjIzLTEuNjYgMi45MS0xLjQ5IDQuNDguMTQgMS4zNC43NCAyLjYyIDEuNzggMy41Ni43LjY0IDEuNTcgMS4xMyAyLjYgMS4zMyAxLjA3LjIxIDIuMi4xNCAzLjg2LS4yLjg4LS4xOCAxLjcxLS40NiAyLjUtLjkyYTYuMiA2LjIgMCAwIDAgMS45Ny0xLjgyYy41Mi0uNzUuODYtMS41OCAxLjA1LTIuNDcuMTktLjkxLjI0LTEuNzQuMjQtMi42NVYyOC41NmMwLTEuMjQuMzUtMS41NyAxLjM2LTEuODIgMCAwIDE3Ljc5LTMuNTkgMTguNjItMy43NSAxLjE2LS4yMiAxLjcuMTEgMS43IDEuMzJ2MTUuODZjMCAuNjMgMCAxLjI2LS40MyAxLjc4LS40Mi41Mi0uOTUuNjctMS41Ni44LS40Ny4wOS0uOTMuMTktMS40LjI4LTEuNzcuMzYtMi45Mi42LTMuOTYgMS0xIC4zOS0xLjc0Ljg4LTIuMzQgMS41YTUuNjQgNS42NCAwIDAgMC0xLjUzIDQuNDhjLjE0IDEuMzQuNzggMi42MiAxLjgyIDMuNTYuNy42NCAxLjU3IDEuMTEgMi42IDEuMzIgMS4wNy4yMSAyLjIuMTQgMy44Ni0uMi44OC0uMTggMS43MS0uNDQgMi41LS45MS43OC0uNDYgMS40NS0xLjA3IDEuOTctMS44MnMuODYtMS41OCAxLjA1LTIuNDdjLjE5LS45MS4yLTEuNzQuMi0yLjY1VjEyLjg5Yy0uMDEtMS4yMy0uNjYtMS45OS0xLjgyLTEuODkiIHN0eWxlPSJmaWxsOiAjZmZmOyBmaWxsLXJ1bGU6IGV2ZW5vZGQ7Ij48L3BhdGg+PC9zdmc+)](%0Ahttps://music.apple.com/profile/Musicman1990%0A){wp-editing="1"}
+
+「違国日記」は、「FEEL YOUNG」（祥伝社）にて2017年7月号より連載が開始され、2023年7月号で完結を迎えた作品だ。人見知りな小説家・高代槙生と、両親を事故で亡くした姪・田汲朝による年の差同居譚として高い評価を集めており、「マンガ大賞2019」第4位、「このマンガがすごい！2024」オンナ編第5位、ダ・ヴィンチ「BOOK OF THE YEAR 2023」コミックランキング第1位などを獲得している。2024年6月には、新垣結衣・早瀬憩が出演する実写映画も公開され、話題を呼んだ。
+
+また、Bialystocksは11月から年明けにかけて、東名阪3会場を巡る「Bialystocks 2+5 Tour」を開催する。現在開催中の「Bialystocks 二人編成ツアー 2025」は全19公演がソールドアウト。これを受けて開催される本ツアーでは、7人編成によるバンドセットでのライブが予定されており、Zepp Nagoya・Zepp Namba（OSAKA）・Zepp DiverCity（TOKYO）の3会場で実施される。チケットは一般発売中だ。
+
+### Bialystocks コメント
+
+「人は誰しも、みな"違国"の住人であり、精神的な隔たりの中を生きています。言葉という、人と人とを繋げたり、時に突き放したりする道具を使いながら、不器用でも他者との関わりの中で、自分の生き方を見つけていく。この物語を邪魔することなく、誰かと誰かが交わる"交差点"で、この曲が誰かを否定も肯定もせず、登場人物のひとりのように鳴ってくれたら嬉しいです。」
+
+-   [![](https://www.musicman.co.jp/wp-content/uploads/2025/11/1e19d0fa2fe8d301c5f021c0b1a499d1.jpeg)](https://www.musicman.co.jp/wp-content/uploads/2025/11/1e19d0fa2fe8d301c5f021c0b1a499d1.jpeg "Bialystocks 2+5 ツアービジュアル"){.opa}
+-   [![](https://www.musicman.co.jp/wp-content/uploads/2025/11/301b380757bbcf3d3397a16eeeb1e9b3.jpeg)](https://www.musicman.co.jp/wp-content/uploads/2025/11/301b380757bbcf3d3397a16eeeb1e9b3.jpeg "Bialystocks"){.opa}
+-   [![](https://www.musicman.co.jp/wp-content/uploads/2025/11/920ba1c06092cf2470956549d9563a9b.jpeg)](https://www.musicman.co.jp/wp-content/uploads/2025/11/920ba1c06092cf2470956549d9563a9b.jpeg "「違国日記」キービジュアル ©ヤマシタトモコ・祥伝社／アニメ「違国日記」製作委員会"){.opa}
+
+-   [Bialystocks オフィシャルサイト![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjEyIiB2aWV3Ym94PSIwIDAgMjQgMjQiIHdpZHRoPSIxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjEgMTN2MTBoLTIxdi0xOWgxMnYyaC0xMHYxNWgxN3YtOGgyem0zLTEyaC0xMC45ODhsNC4wMzUgNC02Ljk3NyA3LjA3IDIuODI4IDIuODI4IDYuOTc3LTcuMDcgNC4xMjUgNC4xNzJ2LTExeiI+PC9wYXRoPjwvc3ZnPg==)](https://bialystocks.com/){rel="noopener noreferrer" target="_blank"}
+
+<div>
+
+### ポッドキャスト概要：
+
+#### Musicman Podcast --- 業界の"今"を深掘り
+
+「Musicman大学」は世界の音楽業界の最新トピックスを解説。講師は『音楽が未来を連れてくる』の著者、Musicman編集長・榎本幹朗。「Talk&Songs」は月間500組ものアーティストニュースを担当するKentaが選ぶ、今聴くべき楽曲と業界人必聴のバズった曲を解説。
+
+[Spotifyでポッドキャストを聴く](https://open.spotify.com/show/3R7aZAf8QshWALocRVC4C0)
+
+</div>
+
+<div>
+
+### プレイリスト概要：
+
+#### 記事連動セレクション --- エピソードと繋がる楽曲たち
+
+月間500のアーティスト記事から厳選した楽曲と、業界人必聴のバズ曲をプレイリストで。最新シーンの決定版！
+
+[Spotifyでプレイリストを聴く](https://open.spotify.com/playlist/7j1kZbOKyo1VsKJFMadW2r)
+
+</div>
+
+## [![](data:image/svg+xml;base64,PHN2ZyB2aWV3Ym94PSIwIDAgMTE3IDM3IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik05MCAyNmMxLjUgMCAzLS42IDMuOS0xLjdoLjF2MS4zaDRWMTEuOGgtNHYxLjNjLS40LS40LS44LS44LTEuMy0xLS44LS41LTEuOC0uNy0yLjctLjctLjYgMC0xLjIuMS0xLjguMy0zIC45LTQuOCAzLjktNC44IDcgMCAzLjYgMi40IDcuMyA2LjYgNy4zem0uOS0xMS4yYzIuMSAwIDMuNCAyIDMuNCAzLjggMCAxLjgtMS4zIDMuOS0zLjQgMy45LTIuMSAwLTMuNC0yLTMuNC0zLjkgMC0xLjggMS4zLTMuOCAzLjQtMy44ek0zMy40IDIyLjljLTEuMiAwLTIuMi0uOC0zLTEuNmwtMS45IDIuM2MxLjMgMS41IDMuMSAyLjMgNSAyLjMgMi44IDAgNS4yLTEuNiA1LjUtNC4zVjIxYzAtMi4xLTEuMS0zLjEtMi40LTMuNy0uNS0uMy0xLjEtLjUtMS42LS43LTEtLjQtMS45LS43LTEuOS0xLjUgMC0uNy43LTEuMiAxLjMtMS4yLjIgMCAuNCAwIC42LjEuNi4xIDEuMS41IDEuNi45bDEuNy0yLjNjLTEuMi0xLTMuMS0xLjQtNC42LTEuNC0uNSAwLTEgLjEtMS40LjItMS45LjYtMy4xIDIuMi0zLjEgNC4yIDAgLjUuMSAxIC4yIDEuNC41IDEuMiAxLjUgMS44IDIuNiAyLjIgMS40LjYgMi45LjkgMi45IDIuMSAwIC4zLS4xLjYtLjIuOC0uMS42LS43LjgtMS4zLjh6TTQxLjYgMTEuOHYxMy43aDQuMVYxMS44aC00LjFNNDMuNiA4LjZDNDUgOC42IDQ2IDcuNSA0NiA2LjJjMC0xLjItLjgtMi4yLTEuOS0yLjUtLjIgMC0uMy0uMS0uNS0uMXMtLjMgMC0uNS4xQzQyIDQgNDEuMiA1IDQxLjIgNi4yYzAgMS4zIDEuMSAyLjQgMi40IDIuNHpNNTUgMjZjMS4zIDAgMi40LS4zIDMuNS0uOHYtMy44Yy0uNy44LTEuOCAxLjMtMi45IDEuMy0yLjMgMC0zLjgtMS44LTMuOC0zLjkgMC0yIDEuMy00LjEgMy42LTQuMS4zIDAgLjYgMCAuOS4xLjguMiAxLjUuNiAyLjEgMS4zdi0zLjhjLTEtLjYtMi4yLS45LTMuMy0uOS00LjMgMC03LjQgMy4zLTcuNCA3LjQgMCAzLjggMyA3LjIgNy4zIDcuMnpNNjUuMSAxOC41YzAtMS4xIDAtMi44LjktMy42LjMtLjMuNy0uNSAxLjMtLjUgMi4xIDAgMiAyLjcgMiA0LjF2N2g0LjF2LTYuN2MwLTEgMC0yLjguOC0zLjcuMy0uNC44LS42IDEuNC0uNiAxLjkgMCAxLjkgMi4yIDEuOSAzLjZ2Ny41aDQuMVYxN2MwLTIuMS0uNC0zLjktMS45LTQuOS0uMy0uMi0uNi0uMy0uOS0uNC0uMy0uMS0uNy0uMi0xLjEtLjJINzdjLTEuNyAwLTMuMy44LTQuMiAyLjItLjktMS41LTIuMy0yLjItNC4xLTIuMi0xLjMgMC0yLjcuNi0zLjUgMS43aC0uMVYxMkg2MXYxMy43aDQuMXYtNy4yek0xMTEuNiAxMmMtLjctLjQtMS43LS43LTIuOS0uN2gtLjVjLTEuMy4xLTIuNC42LTMuMiAxLjd2LTEuM2gtNC4xdjEzLjdoNC4xdi02LjhjMC0xLjYuMS00IDIuMi00LjIgMi40LS4yIDIuNSAyIDIuNSAzLjh2Ny4zaDQuMXYtOC40Yy0uMS0yLjItLjYtNC4xLTIuMi01LjF6Ij48L3BhdGg+PHBhdGggZD0iTTIwLjkgMjkuNEMyNCAyNy4xIDI2IDIzLjUgMjYgMTkuM2MwLTYuOS01LjYtMTIuNS0xMi41LTEyLjVTMSAxMi40IDEgMTkuM3M1LjYgMTIuNSAxMi41IDEyLjVjLjkgMCAxLjgtLjEgMi43LS4zIDEuOCAxLjEgNC4zIDEuNyA3LjYgMS43aDg5Ljl2LTMuN2gtOTBjLTEgLjEtMiAwLTIuOC0uMXpNMTcgMjYuOGMtLjYtMS4yLS45LTIuOS0uOS01LjJoLTQuM2MwIDIuMi4zIDQuMiAxIDUuOS00LjItLjQtNy41LTMuOS03LjUtOC4yIDAtNC41IDMuNy04LjIgOC4yLTguMnM4LjIgMy43IDguMiA4LjJjLjEgMy4zLTEuOSA2LjItNC43IDcuNXoiPjwvcGF0aD48L3N2Zz4=)音楽・エンタメ求人情報](https://qsicman.com){rel="noopener noreferrer" target="_blank"}
+
+[\> 求人情報を掲載希望の方はこちら](https://qsicman.com/inquiry?type=2){target="_blank"}
+
+> ::: section
+> [\@musicman_nusicman](https://www.tiktok.com/@musicman_nusicman?refer=creator_embed){target="_blank"}
+> :::
