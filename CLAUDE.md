@@ -40,6 +40,7 @@ output/
   YYYY-MM-DD_タイトル/
     YYYY-MM-DD_タイトル.md          # 記事本体
     YYYY-MM-DD_タイトル_plan.md     # 生成プラン
+    YYYY-MM-DD_タイトル_note.md     # note用紹介記事（記事一覧には含めない）
     sources/                         # 取得した HTML ソース
       001_ドメイン名_ページ概要.html
       002_ドメイン名_ページ概要.html

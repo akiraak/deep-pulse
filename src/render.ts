@@ -251,7 +251,7 @@ export async function listArticles(): Promise<ArticleEntry[]> {
   const mdFiles: string[] = [];
 
   for (const entry of dirEntries) {
-    if (entry.isFile() && entry.name.endsWith(".md") && !entry.name.endsWith("_plan.md")) {
+    if (entry.isFile() && entry.name.endsWith(".md") && !entry.name.endsWith("_plan.md") && !entry.name.endsWith("_note.md")) {
       // トップレベルの .md ファイル（旧形式）
       mdFiles.push(entry.name);
     } else if (entry.isDirectory()) {
@@ -259,7 +259,7 @@ export async function listArticles(): Promise<ArticleEntry[]> {
       try {
         const subFiles = await readdir(path.join(OUTPUT_DIR, entry.name));
         for (const sf of subFiles) {
-          if (sf.endsWith(".md") && !sf.endsWith("_plan.md")) {
+          if (sf.endsWith(".md") && !sf.endsWith("_plan.md") && !sf.endsWith("_note.md")) {
             mdFiles.push(sf);
           }
         }
