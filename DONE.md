@@ -11,3 +11,4 @@
 - [x] 記事配信サーバーと管理画面サーバーを分離する（`./server.sh` と `./admin.sh` で別々に起動）
 - [x] `_note.md` ファイルを記事一覧から除外する（render.ts 修正 + CLAUDE.md 更新）
 - [x] 管理画面（admin panel）の実装 → [plans/admin-panel.md](plans/admin-panel.md)
+- [x] 管理画面にplansファイルを表示（Markdownレンダリング＋実装内容名表示） → [plans/admin-plans-view.md](plans/admin-plans-view.md)

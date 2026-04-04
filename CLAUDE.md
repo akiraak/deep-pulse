@@ -7,6 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 deep-pulse はニュースを深く考察した記事を Markdown として生成し、HTML サーバーで配信するツール。
 記事の生成は Claude Code 上で行い、`output/` ディレクトリに保存する。
 
+## 作業の進め方
+
+- 実装タスクを依頼された場合、まずプラン（計画）を作成してユーザーの確認を取ること
+- **ユーザーが明示的に実装を承認するまでコードの変更・ファイルの作成を行わない**
+- 「プランを作成して」と言われた場合は、プランファイルの作成のみを行い、実装には進まない
+
 ## Commands
 
 ```bash

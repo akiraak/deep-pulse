@@ -5,9 +5,11 @@ import http from "http";
 import { readFile, readdir, rm, stat } from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
+import { marked } from "marked";
 import { listArticles } from "./render.js";
 
 const OUTPUT_DIR = path.resolve("output");
+const PLANS_DIR = path.resolve("plans");
 
 // --- CSS ---
 
@@ -103,6 +105,17 @@ const ADMIN_CSS = `
     display: flex; align-items: center; gap: 1rem;
   }
   .preview-bar a { color: #92400e; font-weight: 600; }
+  .markdown-body h1 { font-size: 1.4rem; margin: 1.5rem 0 0.8rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem; }
+  .markdown-body h2 { font-size: 1.2rem; margin: 1.3rem 0 0.6rem; }
+  .markdown-body h3 { font-size: 1.05rem; margin: 1rem 0 0.5rem; }
+  .markdown-body p { margin: 0.5rem 0; }
+  .markdown-body ul, .markdown-body ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+  .markdown-body code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.88rem; }
+  .markdown-body pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+  .markdown-body pre code { background: none; padding: 0; color: inherit; }
+  .markdown-body table { border-collapse: collapse; margin: 0.8rem 0; }
+  .markdown-body th, .markdown-body td { border: 1px solid #e2e8f0; padding: 0.4rem 0.8rem; }
+  .markdown-body blockquote { border-left: 3px solid #e2e8f0; padding-left: 1rem; color: #64748b; margin: 0.5rem 0; }
   @media (max-width: 600px) {
     .admin-header { padding: 0.6rem 1rem; gap: 1rem; }
     .container { padding: 0 1rem; }
@@ -128,6 +141,7 @@ function adminHtml(title: string, body: string): string {
   <nav>
     <a href="/">ダッシュボード</a>
     <a href="/articles">記事一覧</a>
+    <a href="/plans">プラン</a>
     <a href="http://localhost:3000" target="_blank">公開サイト</a>
   </nav>
 </header>
@@ -537,6 +551,93 @@ async function handleDelete(
   }
 }
 
+/** プラン一覧 */
+async function handlePlanList(res: http.ServerResponse): Promise<void> {
+  let files: string[] = [];
+  try {
+    files = (await readdir(PLANS_DIR))
+      .filter((f) => f.endsWith(".md"))
+      .sort();
+  } catch {
+    // plans ディレクトリが無い場合
+  }
+
+  const rows: string[] = [];
+  for (const f of files) {
+    let size = "—";
+    let mtime = "—";
+    let heading = "—";
+    try {
+      const s = await stat(path.join(PLANS_DIR, f));
+      size = formatBytes(s.size);
+      mtime = s.mtime.toISOString().slice(0, 10);
+    } catch {
+      // ignore
+    }
+    try {
+      const content = await readFile(path.join(PLANS_DIR, f), "utf-8");
+      const h1Match = content.match(/^#\s+(.+)$/m);
+      if (h1Match) heading = h1Match[1];
+    } catch {
+      // ignore
+    }
+    rows.push(`<tr>
+      <td><a href="/plans/${encodeURIComponent(f)}">${escHtml(f)}</a></td>
+      <td>${escHtml(heading)}</td>
+      <td>${size}</td>
+      <td>${mtime}</td>
+      <td><a href="/plans/${encodeURIComponent(f)}" class="btn btn-secondary">表示</a></td>
+    </tr>`);
+  }
+
+  const body = `
+<div class="container">
+  <h1>プラン一覧（${files.length} 件）</h1>
+  ${
+    files.length === 0
+      ? '<div class="card"><p>プランファイルがありません</p></div>'
+      : `<div class="card" style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>ファイル</th><th>内容</th><th>サイズ</th><th>更新日</th><th></th></tr></thead>
+      <tbody>${rows.join("\n")}</tbody>
+    </table>
+  </div>`
+  }
+</div>`;
+
+  send(res, 200, adminHtml("プラン一覧", body));
+}
+
+/** プラン詳細 */
+async function handlePlanDetail(
+  res: http.ServerResponse,
+  filename: string,
+): Promise<void> {
+  const filePath = path.join(PLANS_DIR, filename);
+  let content: string;
+  try {
+    content = await readFile(filePath, "utf-8");
+  } catch {
+    send(res, 404, adminHtml("エラー", '<div class="container"><div class="alert alert-error">プランファイルが見つかりません</div></div>'));
+    return;
+  }
+
+  const renderedHtml = await marked.parse(content);
+
+  const body = `
+<div class="container">
+  <div class="breadcrumb">
+    <a href="/plans">プラン一覧</a><span class="sep">/</span>
+    ${escHtml(filename)}
+  </div>
+  <div class="card">
+    <div class="markdown-body">${renderedHtml}</div>
+  </div>
+</div>`;
+
+  send(res, 200, adminHtml(filename, body));
+}
+
 /** 静的ビルド実行 */
 async function handleBuild(
   req: http.IncomingMessage,
@@ -585,6 +686,24 @@ export async function handleAdmin(
   // ダッシュボード
   if (pathname === "/" || pathname === "") {
     await handleDashboard(res);
+    return;
+  }
+
+  // /plans/:filename
+  const planDetailMatch = pathname.match(/^\/plans\/([^/]+)$/);
+  if (planDetailMatch) {
+    const filename = decodeURIComponent(planDetailMatch[1]);
+    if (filename.includes("..")) {
+      send(res, 400, "不正なリクエストです");
+      return;
+    }
+    await handlePlanDetail(res, filename);
+    return;
+  }
+
+  // /plans
+  if (pathname === "/plans" || pathname === "/plans/") {
+    await handlePlanList(res);
     return;
   }
 
