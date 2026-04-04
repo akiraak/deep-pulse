@@ -132,6 +132,7 @@ const CSS = `
   .article-list a:hover { color: #8b0000; }
   .site-header {
     border-bottom: 3px double #2c2c2c; margin-bottom: 2rem; padding-bottom: 0.6rem;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.8rem;
   }
   .site-header .site-name {
     font-size: 1.6rem; font-weight: 900; letter-spacing: 0.08em;
@@ -139,11 +140,10 @@ const CSS = `
   }
   .site-header .site-name:hover { color: #8b0000; }
   .site-header .site-subtitle {
-    display: block; font-size: 0.75rem; color: #777;
-    letter-spacing: 0.06em; margin-top: 0.15rem;
+    font-size: 0.75rem; color: #777; letter-spacing: 0.06em;
   }
   .breadcrumb {
-    font-size: 0.85rem; color: #777; margin-top: 0.3rem;
+    font-size: 0.85rem; color: #777; margin-top: 0.3rem; width: 100%;
   }
   .breadcrumb a { color: #777; border-bottom: 1px dotted #aaa; }
   .breadcrumb a:hover { color: #8b0000; border-bottom-style: solid; }
