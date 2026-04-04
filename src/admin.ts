@@ -124,10 +124,10 @@ function adminHtml(title: string, body: string): string {
 </head>
 <body>
 <header class="admin-header">
-  <a href="/admin" class="logo">deep-pulse <span>admin</span></a>
+  <a href="/" class="logo">deep-pulse <span>admin</span></a>
   <nav>
-    <a href="/admin">ダッシュボード</a>
-    <a href="/admin/articles">記事一覧</a>
+    <a href="/">ダッシュボード</a>
+    <a href="/articles">記事一覧</a>
     <a href="http://localhost:3000" target="_blank">公開サイト</a>
   </nav>
 </header>
@@ -226,7 +226,7 @@ async function handleDashboard(res: http.ServerResponse): Promise<void> {
   <div class="card">
     <h2 style="font-size:1.1rem;margin-bottom:0.8rem;">クイックアクション</h2>
     <div class="actions">
-      <a href="/admin/articles" class="btn btn-primary">記事一覧</a>
+      <a href="/articles" class="btn btn-primary">記事一覧</a>
       <button class="btn btn-secondary" onclick="runBuild()">静的ビルド実行</button>
     </div>
     <div id="build-result" style="margin-top:1rem;display:none;"></div>
@@ -244,8 +244,8 @@ async function handleDashboard(res: http.ServerResponse): Promise<void> {
           .map(
             (a) => `<tr>
           <td>${escHtml(a.date)}</td>
-          <td><a href="/admin/articles/${encodeURIComponent(a.filename)}/preview">${escHtml(a.title)}</a></td>
-          <td><a href="/admin/articles/${encodeURIComponent(a.filename)}/sources" class="badge badge-blue">ソース</a></td>
+          <td><a href="/articles/${encodeURIComponent(a.filename)}/preview">${escHtml(a.title)}</a></td>
+          <td><a href="/articles/${encodeURIComponent(a.filename)}/sources" class="badge badge-blue">ソース</a></td>
         </tr>`,
           )
           .join("\n")}
@@ -259,7 +259,7 @@ function runBuild() {
   const el = document.getElementById('build-result');
   el.style.display = 'block';
   el.innerHTML = '<div class="alert" style="background:#f0f9ff;color:#0c4a6e;">ビルド中...</div>';
-  fetch('/admin/build', { method: 'POST' })
+  fetch('/build', { method: 'POST' })
     .then(r => r.json())
     .then(d => {
       if (d.success) {
@@ -314,12 +314,12 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
 
     rows.push(`<tr>
       <td>${escHtml(a.date)}</td>
-      <td><a href="/admin/articles/${encodeURIComponent(a.filename)}/preview">${escHtml(a.title)}</a></td>
+      <td><a href="/articles/${encodeURIComponent(a.filename)}/preview">${escHtml(a.title)}</a></td>
       <td>${size}</td>
       <td>${sourceCount > 0 ? `<span class="badge badge-blue">${sourceCount} 件</span>` : "—"}</td>
       <td class="actions">
-        <a href="/admin/articles/${encodeURIComponent(a.filename)}/preview" class="btn btn-secondary">プレビュー</a>
-        <a href="/admin/articles/${encodeURIComponent(a.filename)}/sources" class="btn btn-secondary">ソース</a>
+        <a href="/articles/${encodeURIComponent(a.filename)}/preview" class="btn btn-secondary">プレビュー</a>
+        <a href="/articles/${encodeURIComponent(a.filename)}/sources" class="btn btn-secondary">ソース</a>
         <button class="btn btn-danger" onclick="confirmDelete('${escHtml(a.filename)}')">削除</button>
       </td>
     </tr>`);
@@ -342,7 +342,7 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
 <script>
 function confirmDelete(filename) {
   if (confirm('「' + filename + '」を削除しますか？\\nこの操作は元に戻せません。')) {
-    fetch('/admin/articles/' + encodeURIComponent(filename) + '/delete', { method: 'POST' })
+    fetch('/articles/' + encodeURIComponent(filename) + '/delete', { method: 'POST' })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -375,9 +375,9 @@ async function handlePreview(
 
   // プレビューバーを挿入
   const previewBar = `<div class="preview-bar">
-  <a href="/admin/articles">← 管理画面に戻る</a>
+  <a href="/articles">← 管理画面に戻る</a>
   <span>プレビュー表示: ${escHtml(filename)}</span>
-  <a href="/admin/articles/${encodeURIComponent(filename)}/sources">ソース一覧</a>
+  <a href="/articles/${encodeURIComponent(filename)}/sources">ソース一覧</a>
 </div>`;
   const modified = html.replace("<body>", `<body>${previewBar}`);
   send(res, 200, modified);
@@ -396,7 +396,7 @@ async function handleSourceList(
       adminHtml(
         "ソース一覧",
         `<div class="container">
-          <div class="breadcrumb"><a href="/admin/articles">記事一覧</a><span class="sep">/</span>${escHtml(filename)}<span class="sep">/</span>ソース</div>
+          <div class="breadcrumb"><a href="/articles">記事一覧</a><span class="sep">/</span>${escHtml(filename)}<span class="sep">/</span>ソース</div>
           <div class="card"><p>この記事にはソースディレクトリがありません</p></div>
         </div>`,
       ),
@@ -428,15 +428,15 @@ async function handleSourceList(
       <td>${escHtml(sf)}</td>
       <td>${escHtml(title)}</td>
       <td>${url}</td>
-      <td><a href="/admin/articles/${encodeURIComponent(filename)}/sources/${encodeURIComponent(sf)}" class="btn btn-secondary">表示</a></td>
+      <td><a href="/articles/${encodeURIComponent(filename)}/sources/${encodeURIComponent(sf)}" class="btn btn-secondary">表示</a></td>
     </tr>`);
   }
 
   const body = `
 <div class="container">
   <div class="breadcrumb">
-    <a href="/admin/articles">記事一覧</a><span class="sep">/</span>
-    <a href="/admin/articles/${encodeURIComponent(filename)}/preview">${escHtml(filename)}</a><span class="sep">/</span>
+    <a href="/articles">記事一覧</a><span class="sep">/</span>
+    <a href="/articles/${encodeURIComponent(filename)}/preview">${escHtml(filename)}</a><span class="sep">/</span>
     ソース
   </div>
   <h1>ソース一覧（${sourceFiles.length} 件）</h1>
@@ -481,9 +481,9 @@ async function handleSourceDetail(
   const body = `
 <div class="container">
   <div class="breadcrumb">
-    <a href="/admin/articles">記事一覧</a><span class="sep">/</span>
-    <a href="/admin/articles/${encodeURIComponent(filename)}/preview">${escHtml(filename)}</a><span class="sep">/</span>
-    <a href="/admin/articles/${encodeURIComponent(filename)}/sources">ソース</a><span class="sep">/</span>
+    <a href="/articles">記事一覧</a><span class="sep">/</span>
+    <a href="/articles/${encodeURIComponent(filename)}/preview">${escHtml(filename)}</a><span class="sep">/</span>
+    <a href="/articles/${encodeURIComponent(filename)}/sources">ソース</a><span class="sep">/</span>
     ${escHtml(sourceName)}
   </div>
   <h1>${escHtml(fm.title ?? sourceName)}</h1>
@@ -563,14 +563,14 @@ export async function handleAdmin(
 ): Promise<void> {
   const method = req.method ?? "GET";
 
-  // POST /admin/build
-  if (method === "POST" && pathname === "/admin/build") {
+  // POST /build
+  if (method === "POST" && pathname === "/build") {
     await handleBuild(req, res);
     return;
   }
 
-  // POST /admin/articles/:filename/delete
-  const deleteMatch = pathname.match(/^\/admin\/articles\/([^/]+)\/delete$/);
+  // POST /articles/:filename/delete
+  const deleteMatch = pathname.match(/^\/articles\/([^/]+)\/delete$/);
   if (method === "POST" && deleteMatch) {
     await handleDelete(req, res, decodeURIComponent(deleteMatch[1]));
     return;
@@ -582,20 +582,20 @@ export async function handleAdmin(
     return;
   }
 
-  // /admin
-  if (pathname === "/admin" || pathname === "/admin/") {
+  // ダッシュボード
+  if (pathname === "/" || pathname === "") {
     await handleDashboard(res);
     return;
   }
 
-  // /admin/articles
-  if (pathname === "/admin/articles" || pathname === "/admin/articles/") {
+  // /articles
+  if (pathname === "/articles" || pathname === "/articles/") {
     await handleArticleList(res);
     return;
   }
 
-  // /admin/articles/:filename/preview
-  const previewMatch = pathname.match(/^\/admin\/articles\/([^/]+)\/preview$/);
+  // /articles/:filename/preview
+  const previewMatch = pathname.match(/^\/articles\/([^/]+)\/preview$/);
   if (previewMatch) {
     const filename = decodeURIComponent(previewMatch[1]);
     if (filename.includes("..")) {
@@ -606,8 +606,8 @@ export async function handleAdmin(
     return;
   }
 
-  // /admin/articles/:filename/sources/:source
-  const sourceDetailMatch = pathname.match(/^\/admin\/articles\/([^/]+)\/sources\/([^/]+)$/);
+  // /articles/:filename/sources/:source
+  const sourceDetailMatch = pathname.match(/^\/articles\/([^/]+)\/sources\/([^/]+)$/);
   if (sourceDetailMatch) {
     const filename = decodeURIComponent(sourceDetailMatch[1]);
     const sourceName = decodeURIComponent(sourceDetailMatch[2]);
@@ -619,8 +619,8 @@ export async function handleAdmin(
     return;
   }
 
-  // /admin/articles/:filename/sources
-  const sourcesMatch = pathname.match(/^\/admin\/articles\/([^/]+)\/sources$/);
+  // /articles/:filename/sources
+  const sourcesMatch = pathname.match(/^\/articles\/([^/]+)\/sources$/);
   if (sourcesMatch) {
     const filename = decodeURIComponent(sourcesMatch[1]);
     if (filename.includes("..")) {

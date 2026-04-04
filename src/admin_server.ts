@@ -10,20 +10,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = decodeURIComponent(url.pathname);
 
   try {
-    // ルートへのアクセスは /admin にリダイレクト
-    if (pathname === "/") {
-      res.writeHead(302, { Location: "/admin" });
-      res.end();
-      return;
-    }
-
-    if (pathname.startsWith("/admin")) {
-      await handleAdmin(req, res, pathname);
-      return;
-    }
-
-    res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
-    res.end("ページが見つかりません");
+    await handleAdmin(req, res, pathname);
   } catch (err) {
     console.error("管理画面サーバーエラー:", err);
     res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
@@ -33,6 +20,6 @@ const server = http.createServer(async (req, res) => {
 
 export function startAdminServer(): void {
   server.listen(ADMIN_PORT, () => {
-    console.log(`管理画面サーバーを起動しました: http://localhost:${ADMIN_PORT}/admin`);
+    console.log(`管理画面サーバーを起動しました: http://localhost:${ADMIN_PORT}`);
   });
 }
