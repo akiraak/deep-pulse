@@ -553,24 +553,30 @@ async function handleDelete(
 
 /** プラン一覧 */
 async function handlePlanList(res: http.ServerResponse): Promise<void> {
-  let files: string[] = [];
+  let files: { name: string; mtimeMs: number }[] = [];
   try {
-    files = (await readdir(PLANS_DIR))
-      .filter((f) => f.endsWith(".md"))
-      .sort();
+    const names = (await readdir(PLANS_DIR)).filter((f) => f.endsWith(".md"));
+    for (const name of names) {
+      try {
+        const s = await stat(path.join(PLANS_DIR, name));
+        files.push({ name, mtimeMs: s.mtimeMs });
+      } catch {
+        files.push({ name, mtimeMs: 0 });
+      }
+    }
+    files.sort((a, b) => b.mtimeMs - a.mtimeMs);
   } catch {
     // plans ディレクトリが無い場合
   }
 
   const rows: string[] = [];
-  for (const f of files) {
+  for (const { name: f, mtimeMs } of files) {
     let size = "—";
-    let mtime = "—";
+    const mtime = mtimeMs > 0 ? new Date(mtimeMs).toISOString().slice(0, 10) : "—";
     let heading = "—";
     try {
       const s = await stat(path.join(PLANS_DIR, f));
       size = formatBytes(s.size);
-      mtime = s.mtime.toISOString().slice(0, 10);
     } catch {
       // ignore
     }
