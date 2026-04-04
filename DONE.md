@@ -10,3 +10,4 @@
 - [x] push 時に GitHub Pages で記事サイトを自動生成・デプロイする
 - [x] 記事配信サーバーと管理画面サーバーを分離する（`./server.sh` と `./admin.sh` で別々に起動）
 - [x] `_note.md` ファイルを記事一覧から除外する（render.ts 修正 + CLAUDE.md 更新）
+- [x] 管理画面（admin panel）の実装 → [plans/admin-panel.md](plans/admin-panel.md)
