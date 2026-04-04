@@ -43,7 +43,7 @@ marked.use({ renderer: chartRenderer });
 const OUTPUT_DIR = path.resolve("output");
 const SITE_URL = "https://akiraak.github.io/deep-pulse";
 const SITE_NAME = "deep-pulse";
-const SITE_DESCRIPTION = "ニュースを深く考察した記事を配信";
+const SITE_DESCRIPTION = "AI-generated articles powered by Claude Code";
 const OGP_IMAGE = `${SITE_URL}/ogp.jpg`;
 
 const CSS = `
@@ -138,6 +138,10 @@ const CSS = `
     text-transform: uppercase; color: #1c1c1c; text-decoration: none; border-bottom: none;
   }
   .site-header .site-name:hover { color: #8b0000; }
+  .site-header .site-subtitle {
+    display: block; font-size: 0.75rem; color: #777;
+    letter-spacing: 0.06em; margin-top: 0.15rem;
+  }
   .breadcrumb {
     font-size: 0.85rem; color: #777; margin-top: 0.3rem;
   }
@@ -197,6 +201,7 @@ function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl
 <body>
 <header class="site-header">
   <a href="${indexHref}" class="site-name">deep-pulse</a>
+  <span class="site-subtitle">AI-generated with Claude Code</span>
   ${breadcrumbHtml}
 </header>
 ${body}

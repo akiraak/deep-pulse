@@ -12,3 +12,4 @@
 - [x] `_note.md` ファイルを記事一覧から除外する（render.ts 修正 + CLAUDE.md 更新）
 - [x] 管理画面（admin panel）の実装 → [plans/admin-panel.md](plans/admin-panel.md)
 - [x] 管理画面にplansファイルを表示（Markdownレンダリング＋実装内容名表示） → [plans/admin-plans-view.md](plans/admin-plans-view.md)
+- [x] サイト名に Claude Code で生成されている文章と分かるようにする → [plans/site-name-claude-code.md](plans/site-name-claude-code.md)
