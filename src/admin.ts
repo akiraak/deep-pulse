@@ -2,11 +2,17 @@
 // 記事の一覧・プレビュー・ソース閲覧・削除・ビルド実行を提供する
 
 import http from "http";
-import { readFile, readdir, rm, stat } from "fs/promises";
+import { readFile, readdir, rm, stat, unlink } from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import { marked } from "marked";
 import { listArticles } from "./render.js";
+import {
+  extractTextFromMarkdown,
+  generateArticleAudio,
+  generateTextAudio,
+} from "./tts.js";
+import { TTS_CHARACTERS } from "./tts_characters.js";
 
 const OUTPUT_DIR = path.resolve("output");
 const PLANS_DIR = path.resolve("plans");
@@ -142,6 +148,7 @@ function adminHtml(title: string, body: string): string {
     <a href="/">ダッシュボード</a>
     <a href="/articles">記事一覧</a>
     <a href="/plans">プラン</a>
+    <a href="/tts">TTS テスト</a>
     <a href="http://localhost:3000" target="_blank">公開サイト</a>
   </nav>
 </header>
@@ -661,6 +668,434 @@ async function handleBuild(
   });
 }
 
+// --- TTS ジョブ管理 ---
+
+interface TtsJob {
+  id: string;
+  status: "queued" | "processing" | "done" | "error";
+  progress: { current: number; total: number };
+  message: string;
+  audioPath?: string;
+  error?: string;
+  createdAt: number;
+}
+
+const ttsJobs = new Map<string, TtsJob>();
+let activeTtsJob: string | null = null;
+
+function generateJobId(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+/** 30分経過したジョブをクリーンアップ */
+function cleanupOldJobs(): void {
+  const now = Date.now();
+  for (const [id, job] of ttsJobs) {
+    if (now - job.createdAt > 30 * 60 * 1000) {
+      // 一時ファイルも削除
+      if (job.audioPath?.startsWith("/tmp/")) {
+        unlink(job.audioPath).catch(() => {});
+      }
+      ttsJobs.delete(id);
+      if (activeTtsJob === id) activeTtsJob = null;
+    }
+  }
+}
+
+/** TTS テストページ */
+async function handleTtsPage(res: http.ServerResponse): Promise<void> {
+  const articles = await listArticles();
+  const apiKeySet = !!process.env["GEMINI_API_KEY"];
+
+  const options = articles
+    .map(
+      (a) =>
+        `<option value="${escHtml(a.filename)}">${escHtml(a.date)} ${escHtml(a.title)}</option>`,
+    )
+    .join("\n");
+
+  const body = `
+<div class="container">
+  <h1>TTS テスト</h1>
+  ${!apiKeySet ? '<div class="alert alert-error">GEMINI_API_KEY が設定されていません。環境変数を設定してからサーバーを再起動してください。</div>' : ""}
+
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-bottom:0.8rem;">キャラクター</h2>
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+      ${TTS_CHARACTERS.map(
+        (c, i) =>
+          `<label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+            <input type="radio" name="character" value="${escHtml(c.id)}" ${i === 0 ? "checked" : ""}>
+            ${escHtml(c.name)}
+          </label>`,
+      ).join("\n      ")}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-bottom:0.8rem;">記事から生成</h2>
+    <select id="article-select" style="width:100%;padding:0.5rem;border:1px solid #e2e8f0;border-radius:6px;font-size:0.92rem;margin-bottom:0.8rem;">
+      <option value="">記事を選択...</option>
+      ${options}
+    </select>
+    <button class="btn btn-primary" onclick="generateFromArticle()" ${!apiKeySet ? "disabled" : ""}>記事全体を生成</button>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-bottom:0.8rem;">テキストから生成</h2>
+    <textarea id="tts-text" rows="6" style="width:100%;padding:0.5rem;border:1px solid #e2e8f0;border-radius:6px;font-size:0.92rem;font-family:inherit;resize:vertical;" placeholder="読み上げたいテキストを入力..."></textarea>
+    <div style="font-size:0.85rem;color:#64748b;margin:0.3rem 0 0.8rem;">文字数: <span id="char-count">0</span></div>
+    <button class="btn btn-primary" onclick="generateFromText()" ${!apiKeySet ? "disabled" : ""}>音声を生成</button>
+  </div>
+
+  <div class="card" id="result-area" style="display:none;">
+    <h2 style="font-size:1.1rem;margin-bottom:0.8rem;">生成結果</h2>
+    <div id="tts-status"></div>
+    <div id="tts-player" style="display:none;margin-top:1rem;">
+      <audio id="tts-audio" controls style="width:100%;"></audio>
+      <div style="margin-top:0.5rem;">
+        <a id="tts-download" href="#" download class="btn btn-secondary">ダウンロード</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('tts-text').addEventListener('input', function() {
+  document.getElementById('char-count').textContent = this.value.length;
+});
+
+let pollTimer = null;
+
+function getSelectedCharacter() {
+  const radio = document.querySelector('input[name="character"]:checked');
+  return radio ? radio.value : 'chobi';
+}
+
+function generateFromArticle() {
+  const select = document.getElementById('article-select');
+  const filename = select.value;
+  if (!filename) { alert('記事を選択してください'); return; }
+  startGeneration('/tts/generate', { filename: filename, characterId: getSelectedCharacter() });
+}
+
+function generateFromText() {
+  const text = document.getElementById('tts-text').value.trim();
+  if (!text) { alert('テキストを入力してください'); return; }
+  startGeneration('/tts/test', { text: text, characterId: getSelectedCharacter() });
+}
+
+function startGeneration(endpoint, body) {
+  const resultArea = document.getElementById('result-area');
+  const statusEl = document.getElementById('tts-status');
+  const playerEl = document.getElementById('tts-player');
+  resultArea.style.display = 'block';
+  playerEl.style.display = 'none';
+  statusEl.innerHTML = '<div class="alert" style="background:#f0f9ff;color:#0c4a6e;">生成を開始しています...</div>';
+
+  fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        pollStatus(d.jobId);
+      } else {
+        statusEl.innerHTML = '<div class="alert alert-error">' + escapeHtml(d.error || 'エラーが発生しました') + '</div>';
+      }
+    })
+    .catch(() => {
+      statusEl.innerHTML = '<div class="alert alert-error">通信エラー</div>';
+    });
+}
+
+function pollStatus(jobId) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    fetch('/tts/status?jobId=' + encodeURIComponent(jobId))
+      .then(r => r.json())
+      .then(d => {
+        const statusEl = document.getElementById('tts-status');
+        if (d.status === 'processing' || d.status === 'queued') {
+          let progress = '';
+          if (d.progress && d.progress.total > 0) {
+            const pct = Math.round((d.progress.current / d.progress.total) * 100);
+            progress = '<div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:0.5rem;"><div style="background:#2563eb;border-radius:4px;height:100%;width:' + pct + '%;transition:width 0.3s;"></div></div>';
+          }
+          statusEl.innerHTML = '<div class="alert" style="background:#f0f9ff;color:#0c4a6e;">' + escapeHtml(d.message) + progress + '</div>';
+        } else if (d.status === 'done') {
+          clearInterval(pollTimer);
+          statusEl.innerHTML = '<div class="alert alert-success">生成完了</div>';
+          const playerEl = document.getElementById('tts-player');
+          const audioEl = document.getElementById('tts-audio');
+          const downloadEl = document.getElementById('tts-download');
+          audioEl.src = d.audioUrl;
+          downloadEl.href = d.audioUrl;
+          playerEl.style.display = 'block';
+        } else if (d.status === 'error') {
+          clearInterval(pollTimer);
+          statusEl.innerHTML = '<div class="alert alert-error">' + escapeHtml(d.error || 'エラーが発生しました') + '</div>';
+        }
+      })
+      .catch(() => {
+        clearInterval(pollTimer);
+        document.getElementById('tts-status').innerHTML = '<div class="alert alert-error">通信エラー</div>';
+      });
+  }, 1500);
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>`;
+
+  send(res, 200, adminHtml("TTS テスト", body));
+}
+
+/** POST /tts/generate — 記事全体の音声生成 */
+async function handleTtsGenerate(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  const rawBody = await readBody(req);
+  let parsed: { filename?: string; characterId?: string };
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    send(res, 400, JSON.stringify({ success: false, error: "不正なリクエスト" }), "application/json");
+    return;
+  }
+
+  const filename = parsed.filename;
+  const characterId = parsed.characterId;
+  if (!filename || filename.includes("..") || filename.includes("/")) {
+    send(res, 400, JSON.stringify({ success: false, error: "不正なファイル名" }), "application/json");
+    return;
+  }
+
+  const apiKey = process.env["GEMINI_API_KEY"];
+  if (!apiKey) {
+    send(res, 400, JSON.stringify({ success: false, error: "GEMINI_API_KEY が未設定です" }), "application/json");
+    return;
+  }
+
+  if (activeTtsJob) {
+    send(res, 409, JSON.stringify({ success: false, error: "別のジョブが実行中です。完了までお待ちください" }), "application/json");
+    return;
+  }
+
+  const dir = await resolveArticleDir(filename);
+  if (!dir) {
+    send(res, 404, JSON.stringify({ success: false, error: "記事が見つかりません" }), "application/json");
+    return;
+  }
+
+  const mdPath = path.join(dir, filename);
+  const baseName = filename.replace(/\.md$/, "");
+  const outputMp3 = path.join(dir, `${baseName}.mp3`);
+
+  cleanupOldJobs();
+  const jobId = generateJobId();
+  const job: TtsJob = {
+    id: jobId,
+    status: "queued",
+    progress: { current: 0, total: 0 },
+    message: "キューに追加しました",
+    createdAt: Date.now(),
+  };
+  ttsJobs.set(jobId, job);
+  activeTtsJob = jobId;
+
+  send(res, 200, JSON.stringify({ success: true, jobId }), "application/json");
+
+  // バックグラウンドで生成
+  (async () => {
+    job.status = "processing";
+    job.message = "音声生成を開始しています...";
+    try {
+      await generateArticleAudio(mdPath, outputMp3, apiKey, (current, total, message) => {
+        job.progress = { current, total };
+        job.message = message;
+      }, characterId);
+      job.status = "done";
+      job.message = "生成完了";
+      job.audioPath = outputMp3;
+    } catch (err) {
+      job.status = "error";
+      job.error = String(err);
+      job.message = "エラーが発生しました";
+    } finally {
+      activeTtsJob = null;
+    }
+  })();
+}
+
+/** POST /tts/test — テキストから音声生成 */
+async function handleTtsTest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  const rawBody = await readBody(req);
+  let parsed: { text?: string; characterId?: string };
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    send(res, 400, JSON.stringify({ success: false, error: "不正なリクエスト" }), "application/json");
+    return;
+  }
+
+  const text = parsed.text;
+  const characterId = parsed.characterId;
+  if (!text || text.trim().length === 0) {
+    send(res, 400, JSON.stringify({ success: false, error: "テキストが空です" }), "application/json");
+    return;
+  }
+
+  const apiKey = process.env["GEMINI_API_KEY"];
+  if (!apiKey) {
+    send(res, 400, JSON.stringify({ success: false, error: "GEMINI_API_KEY が未設定です" }), "application/json");
+    return;
+  }
+
+  if (activeTtsJob) {
+    send(res, 409, JSON.stringify({ success: false, error: "別のジョブが実行中です。完了までお待ちください" }), "application/json");
+    return;
+  }
+
+  cleanupOldJobs();
+  const jobId = generateJobId();
+  const job: TtsJob = {
+    id: jobId,
+    status: "queued",
+    progress: { current: 0, total: 0 },
+    message: "キューに追加しました",
+    createdAt: Date.now(),
+  };
+  ttsJobs.set(jobId, job);
+  activeTtsJob = jobId;
+
+  send(res, 200, JSON.stringify({ success: true, jobId }), "application/json");
+
+  // バックグラウンドで生成
+  (async () => {
+    job.status = "processing";
+    job.message = "音声生成を開始しています...";
+    try {
+      const audioPath = await generateTextAudio(text, apiKey, (current, total, message) => {
+        job.progress = { current, total };
+        job.message = message;
+      }, characterId);
+      job.status = "done";
+      job.message = "生成完了";
+      job.audioPath = audioPath;
+    } catch (err) {
+      job.status = "error";
+      job.error = String(err);
+      job.message = "エラーが発生しました";
+    } finally {
+      activeTtsJob = null;
+    }
+  })();
+}
+
+/** GET /tts/status — ジョブ進捗 */
+function handleTtsStatus(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const jobId = url.searchParams.get("jobId");
+
+  if (!jobId) {
+    send(res, 400, JSON.stringify({ error: "jobId が必要です" }), "application/json");
+    return;
+  }
+
+  const job = ttsJobs.get(jobId);
+  if (!job) {
+    send(res, 404, JSON.stringify({ error: "ジョブが見つかりません" }), "application/json");
+    return;
+  }
+
+  const response: Record<string, unknown> = {
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    message: job.message,
+  };
+
+  if (job.status === "done" && job.audioPath) {
+    const audioFilename = path.basename(job.audioPath);
+    response.audioUrl = `/tts/audio/${encodeURIComponent(audioFilename)}`;
+  }
+
+  if (job.status === "error") {
+    response.error = job.error;
+  }
+
+  send(res, 200, JSON.stringify(response), "application/json");
+}
+
+/** GET /tts/audio/:filename — 音声ファイル配信 */
+async function handleTtsAudio(
+  res: http.ServerResponse,
+  audioFilename: string,
+): Promise<void> {
+  if (audioFilename.includes("..") || audioFilename.includes("/")) {
+    send(res, 400, "不正なファイル名");
+    return;
+  }
+
+  // ジョブから音声パスを探す
+  let audioPath: string | null = null;
+  for (const job of ttsJobs.values()) {
+    if (job.audioPath && path.basename(job.audioPath) === audioFilename) {
+      audioPath = job.audioPath;
+      break;
+    }
+  }
+
+  // ジョブにない場合、記事ディレクトリと /tmp を検索
+  if (!audioPath) {
+    const baseName = audioFilename.replace(/\.mp3$/, "");
+    const articleDir = path.join(OUTPUT_DIR, baseName);
+    const articlePath = path.join(articleDir, audioFilename);
+    try {
+      await stat(articlePath);
+      audioPath = articlePath;
+    } catch {
+      // /tmp から探す
+      const tmpPath = path.join("/tmp/deep-pulse-tts", audioFilename);
+      try {
+        await stat(tmpPath);
+        audioPath = tmpPath;
+      } catch {
+        // not found
+      }
+    }
+  }
+
+  if (!audioPath) {
+    send(res, 404, "音声ファイルが見つかりません");
+    return;
+  }
+
+  try {
+    const data = await readFile(audioPath);
+    res.writeHead(200, {
+      "Content-Type": "audio/mpeg",
+      "Content-Length": data.length.toString(),
+    });
+    res.end(data);
+  } catch {
+    send(res, 404, "音声ファイルが見つかりません");
+  }
+}
+
 // --- メインハンドラー ---
 
 export async function handleAdmin(
@@ -676,10 +1111,41 @@ export async function handleAdmin(
     return;
   }
 
+  // POST /tts/generate
+  if (method === "POST" && pathname === "/tts/generate") {
+    await handleTtsGenerate(req, res);
+    return;
+  }
+
+  // POST /tts/test
+  if (method === "POST" && pathname === "/tts/test") {
+    await handleTtsTest(req, res);
+    return;
+  }
+
   // POST /articles/:filename/delete
   const deleteMatch = pathname.match(/^\/articles\/([^/]+)\/delete$/);
   if (method === "POST" && deleteMatch) {
     await handleDelete(req, res, decodeURIComponent(deleteMatch[1]));
+    return;
+  }
+
+  // GET /tts/status
+  if (method === "GET" && pathname === "/tts/status") {
+    handleTtsStatus(req, res);
+    return;
+  }
+
+  // GET /tts/audio/:filename
+  const ttsAudioMatch = pathname.match(/^\/tts\/audio\/([^/]+)$/);
+  if (method === "GET" && ttsAudioMatch) {
+    await handleTtsAudio(res, decodeURIComponent(ttsAudioMatch[1]));
+    return;
+  }
+
+  // GET /tts
+  if (method === "GET" && (pathname === "/tts" || pathname === "/tts/")) {
+    await handleTtsPage(res);
     return;
   }
 

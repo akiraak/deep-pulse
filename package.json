@@ -11,6 +11,7 @@
     "serve": "tsx src/index.ts",
     "admin": "tsx src/admin_index.ts",
     "build:site": "tsx scripts/build_static.ts",
+    "generate:audio": "tsx --env-file=.env scripts/generate_audio.ts",
     "lint": "eslint src/",
     "format": "prettier --write 'src/**/*.ts'"
   },
@@ -21,6 +22,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@google/genai": "^1.48.0",
     "marked": "^17.0.4"
   },
   "devDependencies": {

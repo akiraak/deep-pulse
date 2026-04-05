@@ -2,135 +2,276 @@
 
 ## 概要
 
-記事ページに音声読み上げボタンを追加し、ブラウザの Web Speech API（SpeechSynthesis）で記事本文を日本語音声で読み上げる。外部 API やサーバーサイド処理は不要で、GitHub Pages の静的サイトでもそのまま動作する。
+記事生成時に Gemini 2.5 Pro TTS API で音声ファイル（MP3）を事前生成し、GitHub Pages で配信する。記事ページには HTML5 `<audio>` プレイヤーを表示する。
 
 ## 技術選定
 
 | 選択肢 | メリット | デメリット |
 |--------|---------|-----------|
-| **Web Speech API（採用）** | 無料、API キー不要、クライアント完結、全モダンブラウザ対応 | 音声品質はブラウザ/OS 依存、日本語ボイスの有無は環境次第 |
-| Google Cloud TTS 等 | 高品質 | 有料、API キー管理、サーバー or ビルド時生成が必要 |
+| Web Speech API | 無料、API キー不要 | 音声品質がブラウザ/OS 依存、日本語の自然さが低い |
+| ElevenLabs | 英語は最高品質 | 日本語が弱い（WER 10.65%）、高額 |
+| Fish Audio S2 | ベンチマーク最強、日本語 Tier1 | 商用ライセンス要交渉、OSS ではない |
+| **Gemini 2.5 Pro TTS（採用）** | 日本語ナレーション品質が高い、安価（$0.24/100万文字）、ユーザーが既に API キーを保有 | レイテンシ高（事前生成で回避）、最大出力 ~655秒/リクエスト |
 
-→ プロジェクトの静的サイト構成に合致する **Web Speech API** を採用する。
+→ ユーザーが既に Gemini を常用しており、日本語品質も高い **Gemini 2.5 Pro TTS** を採用する。
 
 ## 機能仕様
 
-### UI
+### 音声生成（ビルド時）
 
-- 記事ページのヘッダー（パンくず下）に読み上げコントロールバーを表示
-  - ▶ 再生 / ⏸ 一時停止 / ⏹ 停止 の 3 ボタン
-  - 読み上げ速度スライダー（0.5x 〜 2.0x、デフォルト 1.0x）
-  - 現在読み上げ中のセクション名を表示
-- トップページ（記事一覧）には表示しない
-- サイトのクラシック新聞風デザインに馴染むスタイリング
+- 記事生成後に `scripts/generate_audio.ts` を実行して MP3 を生成
+- 音声ファイルは `output/YYYY-MM-DD_タイトル/YYYY-MM-DD_タイトル.mp3` に保存
+- Git にコミットし、`build:site` で `dist_site/articles/` にコピーされる
 
 ### 読み上げ対象
 
 - 記事本文のテキストを対象とする
 - **除外するもの:**
-  - Chart.js グラフ（`<canvas>` / `<script>` ブロック）
-  - Mermaid 図（`.mermaid-wrapper` 内）
-  - `<pre><code>` コードブロック
-  - テーブル（`<table>`）— 読み上げると冗長になるため、見出し行のみ読み上げて「（表は省略します）」と案内する
-  - 「参考ソース:」リスト — URL の羅列は読み上げに不適
+  - Chart.js グラフ（` ```chart ` コードブロック）
+  - Mermaid 図（` ```mermaid ` コードブロック）
+  - その他のコードブロック（` ``` `）
+  - テーブル — 見出し行のみ読み上げて「（表は省略します）」と案内
+  - 「**参考ソース:**」以降の URL リスト
 - **含めるもの:**
-  - 見出し（h1 〜 h3）
-  - 段落（`<p>`）
-  - リスト（`<ul>`, `<ol>`）
-  - 引用（`<blockquote>`）
+  - 見出し（# 〜 ###）
+  - 段落
+  - リスト（箇条書き・番号付き）
+  - 引用（blockquote）
 
-### 読み上げ制御
+### UI（記事ページ）
 
-- テキストをセクション（`<h2>` 区切り）ごとにチャンクに分割して読み上げる
-  - SpeechSynthesis は 1 発話あたりの文字数に制限があるブラウザがあるため、さらにパラグラフ単位で分割
-- セクション読み上げ中に該当の `<h2>` をハイライト表示（薄い背景色）する
-- ページ離脱時に自動停止する
+- 記事ヘッダー（パンくず下）に `<audio>` プレイヤーを表示
+- ブラウザネイティブのコントロール（再生/一時停止/シーク/速度変更/ダウンロード）
+- 音声ファイルが無い記事にはプレイヤーを表示しない
+- サイトのクラシック新聞風デザインに馴染むスタイリング
 
-### 日本語音声
+### 音声設定
 
-- `speechSynthesis.getVoices()` から `lang === "ja-JP"` のボイスを優先的に選択
-- 日本語ボイスが無い環境ではデフォルトボイスにフォールバックし、コントロールバーに注記を表示
+- ボイス: `Kore`（Firm トーン、ニュース記事向き — 変更可能）
+- サンプルレート: 24kHz
+- 出力形式: WAV → ffmpeg で MP3（128kbps）に変換
+- 日本語テキストはそのまま送信（Gemini が自動認識）
 
 ## アーキテクチャ
 
-### 変更ファイル
+### 処理フロー
+
+```
+記事 Markdown
+    ↓
+scripts/generate_audio.ts
+    ↓ テキスト抽出・チャンク分割
+    ↓ Gemini 2.5 Pro TTS API × N回
+    ↓ WAV チャンクを結合
+    ↓ ffmpeg で MP3 変換
+    ↓
+output/YYYY-MM-DD_タイトル/YYYY-MM-DD_タイトル.mp3
+    ↓
+npm run build:site
+    ↓
+dist_site/articles/YYYY-MM-DD_タイトル.mp3
+```
+
+### 変更・追加ファイル
 
 | ファイル | 操作 | 内容 |
 |---------|------|------|
-| `src/render.ts` | 編集 | 記事ページの HTML に TTS コントロール UI + JavaScript を追加 |
+| `scripts/generate_audio.ts` | **新規** | Markdown → テキスト抽出 → Gemini TTS → MP3 生成 |
+| `src/render.ts` | 編集 | 記事ページに `<audio>` プレイヤーの HTML/CSS を追加 |
+| `scripts/build_static.ts` | 編集 | 音声ファイルを `dist_site/articles/` にコピー |
+| `package.json` | 編集 | `@google/genai` 依存追加、`generate:audio` スクリプト追加 |
 
-- 新規ファイルの追加は不要
-- 既存の Chart.js / Mermaid.js と同じパターン（HTML テンプレート内にインライン JS）で実装する
-- `build_static.ts`・`server.ts` の変更は不要（`render.ts` の変更が自動的に反映される）
+### 追加パッケージ
 
-### 実装箇所の詳細
+| パッケージ | 用途 |
+|-----------|------|
+| `@google/genai` | Gemini API クライアント（Google AI SDK） |
 
-#### `src/render.ts` の変更点
+- `ffmpeg` はシステムにインストール済みであることを前提とする（音声の WAV→MP3 変換に使用）
 
-1. **CSS 追加** — `CSS` 定数に TTS コントロールバーのスタイルを追加
-   - `.tts-bar`: コントロールバーのコンテナ（記事ヘッダー下に固定表示ではなくフロー内配置）
-   - `.tts-btn`: ボタンスタイル（サイトのダークトーンに合わせる）
-   - `.tts-btn.active`: 再生中ボタンのアクティブ状態
-   - `.tts-speed`: 速度スライダー
-   - `.tts-status`: 現在のセクション名表示
-   - `.tts-reading`: 読み上げ中セクションのハイライト
-   - レスポンシブ対応（モバイルではボタンを小さくする）
+## 実装の詳細
 
-2. **HTML 追加** — `wrapHtml()` 関数で、記事ページ（`breadcrumb` がある場合）のみ `body` の前に TTS コントロールバー HTML を挿入
-   ```html
-   <div class="tts-bar" id="tts-bar">
-     <button class="tts-btn" id="tts-play" title="再生">▶</button>
-     <button class="tts-btn" id="tts-pause" title="一時停止" disabled>⏸</button>
-     <button class="tts-btn" id="tts-stop" title="停止" disabled>⏹</button>
-     <label class="tts-speed-label">
-       速度: <input type="range" id="tts-speed" class="tts-speed" min="0.5" max="2" step="0.1" value="1">
-       <span id="tts-speed-val">1.0x</span>
-     </label>
-     <span class="tts-status" id="tts-status"></span>
-   </div>
+### `scripts/generate_audio.ts`
+
+```
+使い方: tsx scripts/generate_audio.ts <記事Markdownパス>
+環境変数: GEMINI_API_KEY
+```
+
+#### テキスト抽出ロジック
+
+1. Markdown ファイルを読み込む
+2. 正規表現でコードブロック（` ``` `）を除去
+3. テーブルは見出し行（`|` 区切りの最初の行）のみ残し「（表は省略します）」を追加
+4. 「**参考ソース:**」から次の見出しまでを除去
+5. Markdown 記法（`**`, `*`, `[text](url)` → text、`#` 等）を除去してプレーンテキスト化
+6. 見出しの前に短い間（改行2つ）を挿入して、読み上げ時の区切りを自然にする
+
+#### チャンク分割
+
+- Gemini TTS の最大出力は約 655 秒（約 11 分）
+- 日本語の読み上げ速度は約 300〜350 文字/分
+- 安全マージンを取り、**1チャンク最大 2,500 文字**で分割
+- `##`（h2）の位置で分割を優先し、h2 が無い場合は段落境界で分割
+
+#### API 呼び出し
+
+```typescript
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const response = await ai.models.generateContent({
+  model: "gemini-2.5-pro-preview-tts",
+  contents: [{ role: "user", parts: [{ text: chunkText }] }],
+  config: {
+    responseModalities: ["AUDIO"],
+    speechConfig: {
+      voiceConfig: {
+        prebuiltVoiceConfig: { voiceName: "Kore" },
+      },
+    },
+  },
+});
+
+// response からインライン音声データ（base64 PCM/WAV）を取得
+```
+
+#### 音声結合・変換
+
+1. 各チャンクの WAV データをファイルに保存（`/tmp/chunk_000.wav`, `001.wav`, ...）
+2. ffmpeg で結合 + MP3 変換:
+   ```bash
+   ffmpeg -i "concat:chunk_000.wav|chunk_001.wav|..." -codec:a libmp3lame -b:a 128k output.mp3
    ```
+   または ffmpeg の concat demuxer を使用
+3. 一時ファイルを削除
 
-3. **JavaScript 追加** — `</body>` の前に `<script>` ブロックを追加。内容:
-   - `extractReadableText()`: DOM から読み上げ対象テキストをセクション単位で抽出
-     - `querySelectorAll` で本文要素を走査
-     - chart / mermaid / code / 参考ソースリストを除外
-     - テーブルは見出し行のテキストのみ取得 + 「（表は省略します）」を追加
-   - `splitIntoUtterances(sections)`: 各セクションをさらにパラグラフ単位に分割し、`SpeechSynthesisUtterance` の配列を生成
-   - `selectJapaneseVoice()`: 日本語ボイスを選択するヘルパー
-   - 再生/一時停止/停止のイベントハンドラー
-   - 速度スライダーの変更ハンドラー
-   - セクションハイライトの制御
-   - `beforeunload` イベントでの自動停止
+### `src/render.ts` の変更
+
+#### `renderArticle()` に `audioSrc` パラメータを追加
+
+```typescript
+export async function renderArticle(
+  filename: string,
+  indexHref = "/",
+  audioSrc?: string,  // 追加
+): Promise<string | null> {
+```
+
+#### CSS 追加
+
+```css
+.tts-player {
+  margin: 0.8rem 0 1.5rem;
+  padding: 0.6rem 1rem;
+  background: rgba(44, 44, 44, 0.04);
+  border: 1px solid #d5cfc0;
+  border-radius: 4px;
+}
+.tts-player audio {
+  width: 100%;
+  height: 36px;
+}
+.tts-player-label {
+  font-size: 0.8rem;
+  color: #777;
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.04em;
+}
+```
+
+#### HTML 追加（`audioSrc` がある場合のみ）
+
+パンくずの直後、本文の前に挿入:
+
+```html
+<div class="tts-player">
+  <div class="tts-player-label">音声で聴く</div>
+  <audio controls preload="none" src="${audioSrc}"></audio>
+</div>
+```
+
+`preload="none"` でページ読み込み時に音声をダウンロードしない（帯域節約）。
+
+### `scripts/build_static.ts` の変更
+
+記事ループ内で、音声ファイルの存在をチェックしてコピー:
+
+```typescript
+// 音声ファイルのコピー
+const baseName = article.filename.replace(/\.md$/, "");
+const audioSrcPath = path.join("output", baseName, `${baseName}.mp3`);
+let audioHref: string | undefined;
+try {
+  await access(audioSrcPath);
+  const audioDest = path.join(ARTICLES_DIR, `${baseName}.mp3`);
+  await copyFile(audioSrcPath, audioDest);
+  audioHref = `./${baseName}.mp3`;
+  console.log(`コピー: articles/${baseName}.mp3`);
+} catch {
+  // 音声ファイル無し — スキップ
+}
+
+// renderArticle に audioSrc を渡す
+const html = await renderArticle(article.filename, "../", audioHref);
+```
+
+### `package.json` の変更
+
+```json
+{
+  "scripts": {
+    "generate:audio": "tsx scripts/generate_audio.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0"
+  }
+}
+```
 
 ## 実装ステップ
 
-### Step 1: CSS の追加
-`render.ts` の `CSS` 定数末尾に TTS コントロールバーのスタイルを追加する。
+### Step 1: パッケージ追加
+`@google/genai` をインストール。
 
-### Step 2: HTML コントロールバーの追加
-`wrapHtml()` 関数内で、記事ページ判定（`breadcrumb` の有無）に基づいて TTS バーの HTML を `<header>` と本文の間に挿入する。
+### Step 2: `scripts/generate_audio.ts` を作成
+テキスト抽出 → チャンク分割 → Gemini TTS API 呼び出し → ffmpeg で MP3 変換。
 
-### Step 3: JavaScript の実装
-`wrapHtml()` 関数で記事ページの場合のみ `</body>` の前に TTS 用の `<script>` を挿入する。
+### Step 3: `src/render.ts` を編集
+`renderArticle()` に `audioSrc` パラメータを追加。CSS とオーディオプレイヤー HTML を追加。
 
-### Step 4: 動作確認
-- `npm run serve` で起動し、記事ページで読み上げが動作することを確認
-- `npm run build:site` で静的ビルドが正常に完了することを確認
-- モバイル幅でのレスポンシブ表示を確認
+### Step 4: `scripts/build_static.ts` を編集
+音声ファイルの存在チェック・コピー・`renderArticle()` への `audioSrc` 渡し。
 
-## 追加パッケージ
+### Step 5: 動作確認
+- 既存記事で `npm run generate:audio output/YYYY-MM-DD_タイトル/YYYY-MM-DD_タイトル.md` を実行して音声生成を確認
+- `npm run build:site` で MP3 が `dist_site/articles/` にコピーされることを確認
+- `npm run serve` でプレイヤーが表示され再生できることを確認
+- 音声ファイルが無い記事ではプレイヤーが表示されないことを確認
 
-なし（Web Speech API はブラウザ組み込み）
+## ファイルサイズの見積もり
 
-## ブラウザ対応状況
+- MP3 128kbps: 約 0.94MB/分
+- 記事の読み上げ時間: 約 10〜20 分（3,000〜6,000 文字）
+- 1 記事あたり: 約 10〜19 MB
+- GitHub Pages のリポジトリ上限: 1GB → 約 50〜100 記事分は余裕あり
 
-- Chrome / Edge: 日本語ボイス複数あり。最も安定
-- Safari (macOS/iOS): 日本語ボイスあり。iOS では初回タップが必要（autoplay 制限）
-- Firefox: 日本語ボイスは OS 依存。Linux では少ない場合がある
+## コスト見積もり
+
+- Gemini 2.5 Pro TTS: $0.24/100 万文字
+- 1 記事あたり約 5,000 文字 → $0.0012/記事
+- 事実上無料
+
+## CI について
+
+- GitHub Actions（`pages.yml`）では音声生成を行わない（API キー不要）
+- 音声ファイルは記事と一緒に Git にコミット済みの状態でプッシュされる
+- `build:site` は既存の MP3 をコピーするだけ
 
 ## 対象外（今回のスコープ外）
 
-- 音声ファイル（mp3 等）の事前生成・配信
-- 外部 TTS API の利用
-- 読み上げ位置の記事内スクロール追従
-- 音声のダウンロード機能
+- リアルタイム音声生成
+- 複数ボイスの切り替え UI
+- 読み上げ位置のテキストハイライト連動
+- チャプターマーカー（将来的に追加可能）
