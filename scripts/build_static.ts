@@ -18,10 +18,25 @@ async function build() {
 
   // 個別記事ページ
   const articles = await listArticles();
+  const OUTPUT_DIR = path.resolve("output");
   for (const article of articles) {
-    const html = await renderArticle(article.filename, "../");
+    // MP3 音声ファイルの存在チェック・コピー
+    const baseName = article.filename.replace(/\.md$/, "");
+    const mp3Name = baseName + ".mp3";
+    const mp3Src = path.join(OUTPUT_DIR, baseName, mp3Name);
+    let audioSrc: string | undefined;
+    try {
+      await access(mp3Src);
+      await copyFile(mp3Src, path.join(ARTICLES_DIR, mp3Name));
+      audioSrc = `./${encodeURIComponent(mp3Name)}`;
+      console.log(`コピー: articles/${mp3Name}`);
+    } catch {
+      // 音声ファイルなし — スキップ
+    }
+
+    const html = await renderArticle(article.filename, "../", audioSrc);
     if (html) {
-      const outName = article.filename.replace(/\.md$/, ".html");
+      const outName = baseName + ".html";
       await writeFile(path.join(ARTICLES_DIR, outName), html, "utf-8");
       console.log(`生成: articles/${outName}`);
     }

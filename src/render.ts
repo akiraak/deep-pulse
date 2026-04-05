@@ -148,6 +148,15 @@ const CSS = `
   .breadcrumb a { color: #777; border-bottom: 1px dotted #aaa; }
   .breadcrumb a:hover { color: #8b0000; border-bottom-style: solid; }
   .breadcrumb .sep { margin: 0 0.4em; }
+  .audio-player {
+    margin: 1.2rem 0 1.5rem; padding: 0.8rem 1rem;
+    background: rgba(44,44,44,0.04); border: 1px solid #d5cfc0; border-radius: 6px;
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+  .audio-player .audio-label {
+    font-size: 0.85rem; color: #777; white-space: nowrap; font-style: italic;
+  }
+  .audio-player audio { flex: 1; min-width: 0; }
   @media (max-width: 600px) {
     body { padding: 1rem; font-size: 0.93rem; max-width: 100%; }
     h1 { font-size: 1.6rem; }
@@ -343,6 +352,7 @@ export async function renderIndex(
 export async function renderArticle(
   filename: string,
   indexHref = "/",
+  audioSrc?: string,
 ): Promise<string | null> {
   const filePath = await resolveArticlePath(filename);
   if (!filePath) return null;
@@ -359,7 +369,25 @@ export async function renderArticle(
   const ogUrl = `${SITE_URL}/articles/${encodeURIComponent(htmlName)}`;
   chartCounter = 0;
   mermaidCounter = 0;
-  const html = await marked(md);
+  let html = await marked(md);
+
+  // 音声プレイヤーを h1 タイトル直下に挿入
+  if (audioSrc) {
+    const playerHtml = `<div class="audio-player"><span class="audio-label">音声で聴く</span><audio controls preload="none" src="${audioSrc}"></audio></div>`;
+    // h1 の後（+ 直後の blockquote サブタイトルがあればその後）に挿入
+    const h1End = html.indexOf("</h1>");
+    if (h1End !== -1) {
+      const afterH1 = h1End + "</h1>".length;
+      // h1 直後の blockquote（サブタイトル）をスキップ
+      const rest = html.slice(afterH1);
+      const bqMatch = rest.match(/^\s*<blockquote>[\s\S]*?<\/blockquote>/);
+      const insertPos = afterH1 + (bqMatch ? bqMatch[0].length : 0);
+      html = html.slice(0, insertPos) + "\n" + playerHtml + "\n" + html.slice(insertPos);
+    } else {
+      html = playerHtml + "\n" + html;
+    }
+  }
+
   return wrapHtml({
     title: `${articleTitle} — deep-pulse`,
     body: html,

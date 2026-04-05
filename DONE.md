@@ -15,3 +15,5 @@
 - [x] サイト名に Claude Code で生成されている文章と分かるようにする → [plans/site-name-claude-code.md](plans/site-name-claude-code.md)
 - [x] 管理画面のプラン一覧はプランファイルの更新日付の降順にする
 - [x] 管理画面で音声生成のテストを実装（キャラクター選択対応） → [plans/admin-tts-test.md](plans/admin-tts-test.md)
+- [x] 音声読み上げ機能を付ける → [plans/text-to-speech.md](plans/text-to-speech.md)
+- [x] 動的サーバー（npm run serve）で音声プレイヤー表示・MP3配信に対応

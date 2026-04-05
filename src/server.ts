@@ -2,6 +2,9 @@
 // 生成記事を HTML で配信する
 
 import http from "http";
+import { readFile } from "fs/promises";
+import { access } from "fs/promises";
+import path from "path";
 import { renderIndex, renderArticle } from "./render.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
@@ -33,6 +36,24 @@ const server = http.createServer(async (req, res) => {
     if (articleMatch) {
       let filename = articleMatch[1];
 
+      // MP3 音声ファイル配信
+      if (filename.endsWith(".mp3")) {
+        if (filename.includes("..") || filename.includes("/")) {
+          send(res, 400, "不正なリクエストです");
+          return;
+        }
+        const baseName = filename.replace(/\.mp3$/, "");
+        const mp3Path = path.join(path.resolve("output"), baseName, filename);
+        try {
+          const data = await readFile(mp3Path);
+          res.writeHead(200, { "Content-Type": "audio/mpeg", "Content-Length": data.length.toString() });
+          res.end(data);
+        } catch {
+          send(res, 404, "音声ファイルが見つかりません");
+        }
+        return;
+      }
+
       // .html → .md に変換（静的ビルドとの互換性）
       if (filename.endsWith(".html")) {
         filename = filename.replace(/\.html$/, ".md");
@@ -44,7 +65,19 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const html = await renderArticle(filename);
+      // MP3 音声ファイルの存在チェック
+      const baseName = filename.replace(/\.md$/, "");
+      const mp3Name = baseName + ".mp3";
+      const mp3Path = path.join(path.resolve("output"), baseName, mp3Name);
+      let audioSrc: string | undefined;
+      try {
+        await access(mp3Path);
+        audioSrc = `/articles/${encodeURIComponent(mp3Name)}`;
+      } catch {
+        // 音声ファイルなし
+      }
+
+      const html = await renderArticle(filename, "/", audioSrc);
       if (!html) {
         send(res, 404, "記事が見つかりません");
         return;
