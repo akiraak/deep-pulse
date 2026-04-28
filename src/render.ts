@@ -10,6 +10,20 @@ import { marked, type Tokens } from "marked";
 let chartCounter = 0;
 let mermaidCounter = 0;
 
+// Phase 1: サイドバー目次を有効にする記事のホワイトリスト
+const TOC_ENABLED_ARTICLES = new Set<string>([
+  "2026-04-28_世界モデルと動画生成AI.md",
+]);
+
+interface CollectedHeading {
+  level: number;
+  text: string;
+  id: string;
+}
+
+let collectedHeadings: CollectedHeading[] = [];
+let tocEnabled = false;
+
 const chartRenderer = {
   code(token: Tokens.Code): string | false {
     if (token.lang === "chart") {
@@ -38,7 +52,51 @@ const chartRenderer = {
   },
 };
 
+// H2/H3 にアンカー id を付与し、目次用に見出しを蓄積するカスタムレンダラー
+const headingRenderer = {
+  heading(token: Tokens.Heading): string | false {
+    if (!tocEnabled) return false;
+    if (token.depth !== 2 && token.depth !== 3) return false;
+    const id = `heading-${collectedHeadings.length}`;
+    collectedHeadings.push({
+      level: token.depth,
+      text: stripMarkdownInline(token.text),
+      id,
+    });
+    const inlineHtml = marked.parseInline(token.text, { async: false });
+    return `<h${token.depth} id="${id}">${inlineHtml}</h${token.depth}>\n`;
+  },
+};
+
 marked.use({ renderer: chartRenderer });
+marked.use({ renderer: headingRenderer });
+
+function stripMarkdownInline(s: string): string {
+  return s
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/(\*|_)(.+?)\1/g, "$2")
+    .replace(/`([^`]+)`/g, "$1");
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildToc(headings: CollectedHeading[]): string {
+  if (headings.length === 0) return "";
+  const items = headings
+    .map((h) => {
+      const cls = h.level === 3 ? ' class="toc-h3"' : "";
+      return `<li${cls}><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`;
+    })
+    .join("\n");
+  return `<nav class="toc"><div class="toc-title">目次</div><ul>${items}</ul></nav>`;
+}
 
 const OUTPUT_DIR = path.resolve("output");
 const SITE_URL = "https://akiraak.github.io/deep-pulse";
@@ -157,6 +215,45 @@ const CSS = `
     font-size: 0.85rem; color: #777; white-space: nowrap; font-style: italic;
   }
   .audio-player audio { flex: 1; min-width: 0; }
+  /* サイドバー目次レイアウト（body.has-sidebar のみ有効） */
+  html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+  body.has-sidebar { max-width: 1240px; }
+  .layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+  .article-main { min-width: 0; max-width: 900px; }
+  .sidebar {
+    position: sticky; top: 2rem; align-self: start;
+    font-size: 0.85rem;
+    max-height: calc(100vh - 4rem); overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: #c0b9a8 transparent;
+  }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #c0b9a8; border-radius: 3px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .toc-title {
+    font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    border-bottom: 2px solid #2c2c2c; padding-bottom: 0.3rem; margin-bottom: 0.5rem;
+  }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li { padding: 0.3rem 0; border-bottom: 1px solid #e8e2d0; margin-bottom: 0; }
+  .toc li.toc-h3 { padding-left: 1rem; font-size: 0.78rem; color: #555; }
+  .toc a { color: #1c1c1c; border-bottom: none; display: block; line-height: 1.4; }
+  .toc a:hover { color: #8b0000; }
+  .toc-mobile {
+    display: none; margin: 1.2rem 0; padding: 0.8rem 1rem;
+    background: rgba(44,44,44,0.03); border: 1px solid #d5cfc0; border-radius: 4px;
+  }
+  .toc-mobile .toc-title { font-size: 0.85rem; }
+  @media (max-width: 1100px) {
+    body.has-sidebar { max-width: 900px; }
+    body.has-sidebar .layout { grid-template-columns: 1fr; gap: 0; }
+    body.has-sidebar .sidebar { display: none; }
+    body.has-sidebar .toc-mobile { display: block; }
+  }
   @media (max-width: 600px) {
     body { padding: 1rem; font-size: 0.93rem; max-width: 100%; }
     h1 { font-size: 1.6rem; }
@@ -174,15 +271,29 @@ interface WrapOptions {
   breadcrumb?: string;
   description?: string;
   ogUrl?: string;
+  tocHtml?: string;
 }
 
-function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl }: WrapOptions): string {
+function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl, tocHtml }: WrapOptions): string {
   const breadcrumbHtml = breadcrumb
     ? `<div class="breadcrumb"><a href="${indexHref}">記事一覧</a><span class="sep">/</span>${breadcrumb}</div>`
     : "";
 
   const desc = description ?? SITE_DESCRIPTION;
   const url = ogUrl ?? SITE_URL;
+
+  const hasSidebar = Boolean(tocHtml);
+  const bodyClass = hasSidebar ? ' class="has-sidebar"' : "";
+  const mainHtml = hasSidebar
+    ? `<div class="layout">
+  <aside class="sidebar">
+${tocHtml}
+  </aside>
+  <main class="article-main">
+${body}
+  </main>
+</div>`
+    : body;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -207,13 +318,13 @@ function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#f5f0e6',primaryTextColor:'#1c1c1c',primaryBorderColor:'#8b0000',lineColor:'#8b0000',secondaryColor:'#faf8f0',tertiaryColor:'#e8e2d0',fontFamily:'Georgia, serif'}});</script>
 </head>
-<body>
+<body${bodyClass}>
 <header class="site-header">
   <a href="${indexHref}" class="site-name">deep-pulse</a>
   <span class="site-subtitle">AI-generated with Claude Code</span>
   ${breadcrumbHtml}
 </header>
-${body}
+${mainHtml}
 </body>
 </html>`;
 }
@@ -369,12 +480,22 @@ export async function renderArticle(
   const ogUrl = `${SITE_URL}/articles/${encodeURIComponent(htmlName)}`;
   chartCounter = 0;
   mermaidCounter = 0;
+  collectedHeadings = [];
+  tocEnabled = TOC_ENABLED_ARTICLES.has(filename);
   let html = await marked(md);
 
-  // 音声プレイヤーを h1 タイトル直下に挿入
+  const tocHtml = tocEnabled ? buildToc(collectedHeadings) : "";
+
+  // 音声プレイヤー / モバイル用目次を h1 タイトル直下に挿入
+  const blocks: string[] = [];
   if (audioSrc) {
-    const playerHtml = `<div class="audio-player"><span class="audio-label">音声で聴く</span><audio controls preload="none" src="${audioSrc}"></audio></div>`;
-    // h1 の後（+ 直後の blockquote サブタイトルがあればその後）に挿入
+    blocks.push(`<div class="audio-player"><span class="audio-label">音声で聴く</span><audio controls preload="none" src="${audioSrc}"></audio></div>`);
+  }
+  if (tocHtml) {
+    blocks.push(`<div class="toc-mobile">${tocHtml}</div>`);
+  }
+  if (blocks.length > 0) {
+    const insertion = "\n" + blocks.join("\n") + "\n";
     const h1End = html.indexOf("</h1>");
     if (h1End !== -1) {
       const afterH1 = h1End + "</h1>".length;
@@ -382,9 +503,9 @@ export async function renderArticle(
       const rest = html.slice(afterH1);
       const bqMatch = rest.match(/^\s*<blockquote>[\s\S]*?<\/blockquote>/);
       const insertPos = afterH1 + (bqMatch ? bqMatch[0].length : 0);
-      html = html.slice(0, insertPos) + "\n" + playerHtml + "\n" + html.slice(insertPos);
+      html = html.slice(0, insertPos) + insertion + html.slice(insertPos);
     } else {
-      html = playerHtml + "\n" + html;
+      html = insertion + html;
     }
   }
 
@@ -395,5 +516,6 @@ export async function renderArticle(
     breadcrumb: articleTitle,
     description,
     ogUrl,
+    tocHtml,
   });
 }
