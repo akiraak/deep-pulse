@@ -10,11 +10,6 @@ import { marked, type Tokens } from "marked";
 let chartCounter = 0;
 let mermaidCounter = 0;
 
-// Phase 1: サイドバー目次を有効にする記事のホワイトリスト
-const TOC_ENABLED_ARTICLES = new Set<string>([
-  "2026-04-28_世界モデルと動画生成AI.md",
-]);
-
 interface CollectedHeading {
   level: number;
   text: string;
@@ -22,7 +17,6 @@ interface CollectedHeading {
 }
 
 let collectedHeadings: CollectedHeading[] = [];
-let tocEnabled = false;
 
 const chartRenderer = {
   code(token: Tokens.Code): string | false {
@@ -55,7 +49,6 @@ const chartRenderer = {
 // H2/H3 にアンカー id を付与し、目次用に見出しを蓄積するカスタムレンダラー
 const headingRenderer = {
   heading(token: Tokens.Heading): string | false {
-    if (!tocEnabled) return false;
     if (token.depth !== 2 && token.depth !== 3) return false;
     const id = `heading-${collectedHeadings.length}`;
     collectedHeadings.push({
@@ -481,10 +474,9 @@ export async function renderArticle(
   chartCounter = 0;
   mermaidCounter = 0;
   collectedHeadings = [];
-  tocEnabled = TOC_ENABLED_ARTICLES.has(filename);
   let html = await marked(md);
 
-  const tocHtml = tocEnabled ? buildToc(collectedHeadings) : "";
+  const tocHtml = buildToc(collectedHeadings);
 
   // 音声プレイヤー / モバイル用目次を h1 タイトル直下に挿入
   const blocks: string[] = [];
