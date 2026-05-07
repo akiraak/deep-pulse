@@ -1,0 +1,777 @@
+---
+url: https://nextjs.org/docs/app/guides/data-security
+title: "Guides: Data Security | Next.js"
+---
+
+[This page is also available as Markdown at [/docs/app/guides/data-security.md](/docs/app/guides/data-security.md). For an index of Next.js documentation, see [/docs/llms.txt](/docs/llms.txt).]{.sr-only}
+
+[Copy page]{.truncate .inline-block .px-1.5}
+
+[[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNC4wNiA1LjUtLjUzLjUzLTQuODIgNC44MmExIDEgMCAwIDEtMS40MiAwTDIuNDcgNi4wM2wtLjUzLS41M0wzIDQuNDRsLjUzLjUzTDggOS40NGw0LjQ3LTQuNDcuNTMtLjUzeiIgZmlsbD0iY3VycmVudENvbG9yIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)]{.inline-flex .items-center .justify-center .gap-1 .flex-nowrap}]{.truncate .px-1.5 .shrink-0 .flex .items-center .justify-center}
+
+# How to think about data security in Next.js {#how-to-think-about-data-security-in-next.js .wrap-break-word .hyphens-auto}
+
+Last updated May 6, 2026
+
+[React Server Components[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://react.dev/reference/rsc/server-components){rel="noopener noreferrer nofollow" target="_blank"} improve performance and simplify data fetching, but also shift where and how data is accessed, changing some of the traditional security assumptions for handling data in frontend apps.
+
+This guide will help you understand how to think about data security in Next.js and how to implement best practices.
+
+## Data fetching approaches[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#data-fetching-approaches){aria-label="Link to this section" heading-link=""} {#data-fetching-approaches docs-heading=""}
+
+There are three main approaches we recommend for fetching data in Next.js, depending on the size and age of your project:
+
+-   [HTTP APIs](#external-http-apis): for existing large applications and organizations.
+-   [Data Access Layer](#data-access-layer): for new projects.
+-   [Component-Level Data Access](#component-level-data-access): for prototypes and learning.
+
+We recommend choosing one data fetching approach and avoiding mixing them. This makes it clear for both developers working in your code base and security auditors what to expect.
+
+### External HTTP APIs[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#external-http-apis){aria-label="Link to this section" heading-link=""} {#external-http-apis docs-heading=""}
+
+You should follow a **Zero Trust** model when adopting Server Components in an existing project. You can continue calling your existing API endpoints such as REST or GraphQL from Server Components using [`fetch`](/docs/app/api-reference/functions/fetch), just as you would in Client Components.
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import { cookies } from 'next/headers'
+ 
+export default async function Page() {
+  const cookieStore = cookies()
+  const token = cookieStore.get('AUTH_TOKEN')?.value
+ 
+  const res = await fetch('https://api.example.com/profile', {
+    headers: {
+      Cookie: `AUTH_TOKEN=${token}`,
+      // Other headers
+    },
+  })
+ 
+  // ....
+}
+```
+
+This approach works well when:
+
+-   You already have security practices in place.
+-   Separate backend teams use other languages or manage APIs independently.
+
+### Data Access Layer[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#data-access-layer){aria-label="Link to this section" heading-link=""} {#data-access-layer docs-heading=""}
+
+For new projects, we recommend creating a dedicated **Data Access Layer (DAL)**. This is a internal library that controls how and when data is fetched, and what gets passed to your render context.
+
+A Data Access Layer should:
+
+-   Only run on the server.
+-   Perform authorization checks.
+-   Return safe, minimal **Data Transfer Objects (DTOs)**.
+
+This approach centralizes all data access logic, making it easier to enforce consistent data access and reduces the risk of authorization bugs. You also get the benefit of sharing an in-memory cache across different parts of a request.
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[data/auth.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import { cache } from 'react'
+import { cookies } from 'next/headers'
+ 
+// Cached helper methods makes it easy to get the same value in many places
+// without manually passing it around. This discourages passing it from Server
+// Component to Server Component which minimizes risk of passing it to a Client
+// Component.
+export const getCurrentUser = cache(async () => {
+  const token = cookies().get('AUTH_TOKEN')
+  const decodedToken = await decryptAndValidate(token)
+  // Don't include secret tokens or private information as public fields.
+  // Use classes to avoid accidentally passing the whole object to the client.
+  return new User(decodedToken.id)
+})
+```
+
+[data/user-dto.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import 'server-only'
+import { getCurrentUser } from './auth'
+ 
+function canSeeUsername(viewer: User) {
+  // Public info for now, but can change
+  return true
+}
+ 
+function canSeePhoneNumber(viewer: User, team: string) {
+  // Privacy rules
+  return viewer.isAdmin || team === viewer.team
+}
+ 
+export async function getProfileDTO(slug: string) {
+  // Don't pass values, read back cached values, also solves context and easier to make it lazy
+ 
+  // use a database API that supports safe templating of queries
+  const [rows] = await sql`SELECT * FROM user WHERE slug = ${slug}`
+  const userData = rows[0]
+ 
+  const currentUser = await getCurrentUser()
+ 
+  // only return the data relevant for this query and not everything
+  // <https://www.w3.org/2001/tag/doc/APIMinimization>
+  return {
+    username: canSeeUsername(currentUser) ? userData.username : null,
+    phonenumber: canSeePhoneNumber(currentUser, userData.team)
+      ? userData.phonenumber
+      : null,
+  }
+}
+```
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import { getProfile } from '../../data/user'
+ 
+export async function Page({ params: { slug } }) {
+  // This page can now safely pass around this profile knowing
+  // that it shouldn't contain anything sensitive.
+  const profile = await getProfile(slug);
+  ...
+}
+```
+
+> **Good to know:** Secret keys should be stored in environment variables, but only the Data Access Layer should access `process.env`. This keeps secrets from being exposed to other parts of the application.
+
+### Component-level data access[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#component-level-data-access){aria-label="Link to this section" heading-link=""} {#component-level-data-access docs-heading=""}
+
+For quick prototypes and iteration, database queries can be placed directly in Server Components.
+
+This approach, however, makes it easier to accidentally expose private data to the client, for example:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import Profile from './components/profile.tsx'
+ 
+export async function Page({ params: { slug } }) {
+  const [rows] = await sql`SELECT * FROM user WHERE slug = ${slug}`
+  const userData = rows[0]
+  // EXPOSED: This exposes all the fields in userData to the client because
+  // we are passing the data from the Server Component to the Client.
+  return <Profile user={userData} />
+}
+```
+
+[app/ui/profile.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+'use client'
+ 
+// BAD: This is a bad props interface because it accepts way more data than the
+// Client Component needs and it encourages server components to pass all that
+// data down. A better solution would be to accept a limited object with just
+// the fields necessary for rendering the profile.
+export default async function Profile({ user }: { user: User }) {
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      ...
+    </div>
+  )
+}
+```
+
+You should sanitize the data before passing it to the Client Component:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[data/user.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import { sql } from './db'
+ 
+export async function getUser(slug: string) {
+  const [rows] = await sql`SELECT * FROM user WHERE slug = ${slug}`
+  const user = rows[0]
+ 
+  // Return only the public fields
+  return {
+    name: user.name,
+  }
+}
+```
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import { getUser } from '../data/user'
+import Profile from './ui/profile'
+ 
+export default async function Page({
+  params: { slug },
+}: {
+  params: { slug: string }
+}) {
+  const publicProfile = await getUser(slug)
+  return <Profile user={publicProfile} />
+}
+```
+
+## Reading data[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#reading-data){aria-label="Link to this section" heading-link=""} {#reading-data docs-heading=""}
+
+### Passing data from server to client[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#passing-data-from-server-to-client){aria-label="Link to this section" heading-link=""} {#passing-data-from-server-to-client docs-heading=""}
+
+On the initial load, both Server and Client Components run on the server to generate HTML. However, they execute in isolated module systems. This ensures that Server Components can access private data and APIs, while Client Components cannot.
+
+**Server Components:**
+
+-   Run only on the server.
+-   Can safely access environment variables, secrets, databases, and internal APIs.
+
+**Client Components:**
+
+-   Run on the server during prerendering, but must follow the same security assumptions as code running in the browser.
+-   Must not access privileged data or server-only modules.
+
+This ensures the app is secure by default, but it\'s possible to accidentally expose private data through how data is fetched or passed to components.
+
+### Tainting[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#tainting){aria-label="Link to this section" heading-link=""} {#tainting docs-heading=""}
+
+To prevent accidental exposure of private data to the client, you can use React Taint APIs:
+
+-   [`experimental_taintObjectReference`[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://react.dev/reference/react/experimental_taintObjectReference){rel="noopener noreferrer nofollow" target="_blank"} for data objects.
+-   [`experimental_taintUniqueValue`[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://react.dev/reference/react/experimental_taintUniqueValue){rel="noopener noreferrer nofollow" target="_blank"} for specific values.
+
+You can enable usage in your Next.js app with the [`experimental.taint`](/docs/app/api-reference/config/next-config-js/taint) option in `next.config.js`:
+
+![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjE3IiBzdHlsZT0ibWFyZ2luLWxlZnQ6LTEuNXB4IiB2aWV3Ym94PSIwIDAgNTAgNTAiIHdpZHRoPSIxNyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNIDQzLjMzNTkzOCA0IEwgNi42Njc5NjkgNCBDIDUuMTk1MzEzIDQgNCA1LjE5NTMxMyA0IDYuNjY3OTY5IEwgNCA0My4zMzIwMzEgQyA0IDQ0LjgwNDY4OCA1LjE5NTMxMyA0NiA2LjY2Nzk2OSA0NiBMIDQzLjMzMjAzMSA0NiBDIDQ0LjgwNDY4OCA0NiA0NiA0NC44MDQ2ODggNDYgNDMuMzM1OTM4IEwgNDYgNi42Njc5NjkgQyA0NiA1LjE5NTMxMyA0NC44MDQ2ODggNCA0My4zMzU5MzggNCBaIE0gMjcgMzYuMTgzNTk0IEMgMjcgNDAuMTc5Njg4IDI0LjY1NjI1IDQyIDIxLjIzNDM3NSA0MiBDIDE4LjE0MDYyNSA0MiAxNS45MTAxNTYgMzkuOTI1NzgxIDE1IDM4IEwgMTguMTQ0NTMxIDM2LjA5NzY1NiBDIDE4Ljc1IDM3LjE3MTg3NSAxOS42NzE4NzUgMzggMjEgMzggQyAyMi4yNjk1MzEgMzggMjMgMzcuNTAzOTA2IDIzIDM1LjU3NDIxOSBMIDIzIDIzIEwgMjcgMjMgWiBNIDM1LjY3NTc4MSA0MiBDIDMyLjEzMjgxMyA0MiAzMC4xMjEwOTQgNDAuMjE0ODQ0IDI5IDM4IEwgMzIgMzYgQyAzMi44MTY0MDYgMzcuMzM1OTM4IDMzLjcwNzAzMSAzOC42MTMyODEgMzUuNTg5ODQ0IDM4LjYxMzI4MSBDIDM3LjE3MTg3NSAzOC42MTMyODEgMzggMzcuODI0MjE5IDM4IDM2LjczMDQ2OSBDIDM4IDM1LjQyNTc4MSAzNy4xNDA2MjUgMzQuOTYwOTM4IDM1LjQwMjM0NCAzNC4xOTkyMTkgTCAzNC40NDkyMTkgMzMuNzg5MDYzIEMgMzEuNjk1MzEzIDMyLjYxNzE4OCAyOS44NjMyODEgMzEuMTQ4NDM4IDI5Ljg2MzI4MSAyOC4wMzkwNjMgQyAyOS44NjMyODEgMjUuMTc5Njg4IDMyLjA0Njg3NSAyMyAzNS40NTMxMjUgMjMgQyAzNy44Nzg5MDYgMjMgMzkuNjIxMDk0IDIzLjg0Mzc1IDQwLjg3ODkwNiAyNi4wNTQ2ODggTCAzNy45MTAxNTYgMjcuOTY0ODQ0IEMgMzcuMjUzOTA2IDI2Ljc4OTA2MyAzNi41NTA3ODEgMjYuMzI4MTI1IDM1LjQ1MzEyNSAyNi4zMjgxMjUgQyAzNC4zMzU5MzggMjYuMzI4MTI1IDMzLjYyODkwNiAyNy4wMzkwNjMgMzMuNjI4OTA2IDI3Ljk2NDg0NCBDIDMzLjYyODkwNiAyOS4xMDkzNzUgMzQuMzM1OTM4IDI5LjU3MDMxMyAzNS45NzI2NTYgMzAuMjgxMjUgTCAzNi45MjU3ODEgMzAuNjkxNDA2IEMgNDAuMTcxODc1IDMyLjA3ODEyNSA0MiAzMy40OTYwOTQgNDIgMzYuNjgzNTk0IEMgNDIgNDAuMTE3MTg4IDM5LjMwMDc4MSA0MiAzNS42NzU3ODEgNDIgWiIgZmlsbD0iY3VycmVudENvbG9yIj48L3BhdGg+PC9zdmc+)
+
+[next.config.js]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+module.exports = {
+  experimental: {
+    taint: true,
+  },
+}
+```
+
+This prevents the tainted objects or values from being passed to the client. However, it\'s an additional layer of protection, you should still filter and sanitize the data in your [DAL](#data-access-layer) before passing it to React\'s render context.
+
+> **Good to know:**
+>
+> -   By default, environment variables are only available on the Server. Next.js exposes any environment variable prefixed with `NEXT_PUBLIC_` to the client. [Learn more](/docs/app/guides/environment-variables).
+> -   Functions and classes are already blocked from being passed to Client Components by default.
+
+### Preventing client-side execution of server-only code[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#preventing-client-side-execution-of-server-only-code){aria-label="Link to this section" heading-link=""} {#preventing-client-side-execution-of-server-only-code docs-heading=""}
+
+To prevent server-only code from being executed on the client, you can mark a module with the [`server-only`[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://www.npmjs.com/package/server-only){rel="noopener noreferrer nofollow" target="_blank"} package:
+
+pnpm
+
+npm
+
+yarn
+
+bun
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xLjUzIDEyLjc4LS41My41My0xLjA2LTEuMDYuNTMtLjUzTDQuMTkgOCAuNDcgNC4yOGwtLjUzLS41M0wxIDIuNjlsLjUzLjUzTDUuNiA3LjI5YTEgMSAwIDAgMSAwIDEuNDJ6bTcuMjItLjI4SDhWMTRoOHYtMS41SDguNzUiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+[Terminal]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+pnpm add server-only
+```
+
+[lib/data.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import 'server-only'
+ 
+//...
+```
+
+This ensures that proprietary code or internal business logic stays on the server by causing a build error if the module is imported in the client environment.
+
+## Mutating Data[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#mutating-data){aria-label="Link to this section" heading-link=""} {#mutating-data docs-heading=""}
+
+Next.js handles mutations with [Server Actions[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://react.dev/reference/rsc/server-functions){rel="noopener noreferrer nofollow" target="_blank"}.
+
+### Built-in Server Actions Security features[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#built-in-server-actions-security-features){aria-label="Link to this section" heading-link=""} {#built-in-server-actions-security-features docs-heading=""}
+
+By default, when a Server Action is created and exported, it is reachable via a direct POST request, not just through your application\'s UI. This means, even if a Server Action or utility function is not imported elsewhere in your code, it can still be called externally.
+
+To improve security, Next.js has the following built-in features:
+
+-   **Secure action IDs:** Next.js creates encrypted, non-deterministic IDs to allow the client to reference and call the Server Action. These IDs are periodically recalculated between builds for enhanced security.
+-   **Dead code elimination:** Unused Server Actions (referenced by their IDs) are removed from client bundle to avoid public access.
+
+> **Good to know**:
+>
+> The IDs are created during compilation and are cached for a maximum of 14 days. They will be regenerated when a new build is initiated or when the build cache is invalidated. This security improvement reduces the risk in cases where an authentication layer is missing. However, you should still treat Server Actions as reachable via direct POST requests and verify authentication and authorization inside each one.
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+// app/actions.js
+'use server'
+ 
+// If this action **is** used in our application, Next.js
+// will create a secure ID to allow the client to reference
+// and call the Server Action.
+export async function updateUserAction(formData) {}
+ 
+// If this action **is not** used in our application, Next.js
+// will automatically remove this code during `next build`
+// and will not create a public endpoint.
+export async function deleteUserAction(formData) {}
+```
+
+### Validating client input[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#validating-client-input){aria-label="Link to this section" heading-link=""} {#validating-client-input docs-heading=""}
+
+You should always validate input from client, as they can be easily modified. For example, form data, URL parameters, headers, and searchParams:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+// BAD: Trusting searchParams directly
+export default async function Page({ searchParams }) {
+  const isAdmin = searchParams.get('isAdmin')
+  if (isAdmin === 'true') {
+    // Vulnerable: relies on untrusted client data
+    return <AdminPanel />
+  }
+}
+ 
+// GOOD: Re-verify every time
+import { cookies } from 'next/headers'
+import { verifyAdmin } from './auth'
+ 
+export default async function Page() {
+  const token = cookies().get('AUTH_TOKEN')
+  const isAdmin = await verifyAdmin(token)
+ 
+  if (isAdmin) {
+    return <AdminPanel />
+  }
+}
+```
+
+### Authentication and authorization[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#authentication-and-authorization){aria-label="Link to this section" heading-link=""} {#authentication-and-authorization docs-heading=""}
+
+A page-level authentication check does not extend to the Server Actions defined within it. Always re-verify inside the action:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/admin/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+ 
+export default async function AdminPage() {
+  const session = await auth()
+  if (!session?.user?.isAdmin) {
+    redirect('/login')
+  }
+ 
+  return (
+    <form
+      action={async () => {
+        'use server'
+        const session = await auth()
+        if (!session?.user?.isAdmin) {
+          throw new Error('Unauthorized')
+        }
+        await db.record.deleteMany()
+      }}
+    >
+      <button>Delete Records</button>
+    </form>
+  )
+}
+```
+
+The highlighted `auth()` check inside the action is critical. The page-level redirect on line 6 controls which UI is rendered, but the Server Action is a separate entry point and must verify the caller on its own.
+
+Beyond authentication (is the user logged in?), remember to check **authorization** (does this user have permission to act on this specific resource?). This prevents [Insecure Direct Object Reference (IDOR)[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html){rel="noopener noreferrer nofollow" target="_blank"} vulnerabilities:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/actions.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+'use server'
+ 
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+ 
+export async function deletePost(postId: string) {
+  const session = await auth()
+  if (!session?.user) {
+    throw new Error('Unauthorized')
+  }
+ 
+  const post = await db.post.findUnique({ where: { id: postId } })
+ 
+  // Check that the user owns this resource
+  if (post.authorId !== session.user.id) {
+    throw new Error('Forbidden')
+  }
+ 
+  await db.post.delete({ where: { id: postId } })
+}
+```
+
+Learn more about [Authentication](/docs/app/guides/authentication) in Next.js.
+
+### Using a Data Access Layer for mutations[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#using-a-data-access-layer-for-mutations){aria-label="Link to this section" heading-link=""} {#using-a-data-access-layer-for-mutations docs-heading=""}
+
+Just as we recommend a [Data Access Layer](#data-access-layer) for reading data, you can apply the same pattern to mutations. This keeps authentication, authorization, and database logic in a dedicated `server-only` module, while `"use server"` actions stay thin.
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[data/posts.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+import 'server-only'
+ 
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+ 
+export async function deletePost(postId: string) {
+  const session = await auth()
+  if (!session?.user) {
+    throw new Error('Unauthorized')
+  }
+ 
+  const post = await db.post.findUnique({ where: { id: postId } })
+ 
+  if (post.authorId !== session.user.id) {
+    throw new Error('Forbidden')
+  }
+ 
+  await db.post.delete({ where: { id: postId } })
+}
+```
+
+The `"use server"` action then delegates to the DAL:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/actions.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+'use server'
+ 
+import { deletePost } from '@/data/posts'
+import { revalidatePath } from 'next/cache'
+ 
+export async function deletePostAction(postId: string) {
+  await deletePost(postId) // Auth + authz happen inside the DAL
+  revalidatePath('/posts')
+}
+```
+
+> **Good to know:** You can use `import 'server-only'` in both the Data Access Layer and the `"use server"` file itself. Both work when the action is imported into a Client Component (for example, to pass it to `useActionState`), because `"use server"` modules are resolved in a server-only webpack layer.
+
+### Controlling return values[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#controlling-return-values){aria-label="Link to this section" heading-link=""} {#controlling-return-values docs-heading=""}
+
+Server Action return values are serialized and sent to the client. Only return what the UI needs, not raw database records.
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/actions.ts]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+'use server'
+ 
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+ 
+// BAD: Returns the full database record, which may include
+// internal fields the client should not see.
+export async function updateUser(data: FormData) {
+  const session = await auth()
+  if (!session?.user) {
+    throw new Error('Unauthorized')
+  }
+  return db.user.update({
+    where: { id: session.user.id },
+    data: { name: data.get('name') as string },
+  })
+}
+ 
+// GOOD: Returns only what the client needs.
+export async function updateUserSafe(data: FormData) {
+  const session = await auth()
+  if (!session?.user) {
+    throw new Error('Unauthorized')
+  }
+  await db.user.update({
+    where: { id: session.user.id },
+    data: { name: data.get('name') as string },
+  })
+  return { success: true }
+}
+```
+
+### Rate limiting[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#rate-limiting){aria-label="Link to this section" heading-link=""} {#rate-limiting docs-heading=""}
+
+For expensive operations (sending emails, writing to a database), consider adding rate limiting to prevent abuse. See the [Rate limiting](/docs/app/guides/backend-for-frontend#rate-limiting) example in the Backend for Frontend guide.
+
+### Closures and encryption[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#closures-and-encryption){aria-label="Link to this section" heading-link=""} {#closures-and-encryption docs-heading=""}
+
+Defining a Server Action inside a component creates a [closure[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures){rel="noopener noreferrer nofollow" target="_blank"} where the action has access to the outer function\'s scope. For example, the `publish` action has access to the `publishVersion` variable:
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+export default async function Page() {
+  const publishVersion = await getLatestVersion();
+ 
+  async function publish() {
+    "use server";
+    if (publishVersion !== await getLatestVersion()) {
+      throw new Error('The version has changed since pressing publish');
+    }
+    ...
+  }
+ 
+  return (
+    <form>
+      <button formAction={publish}>Publish</button>
+    </form>
+  );
+}
+```
+
+Closures are useful when you need to capture a *snapshot* of data (e.g. `publishVersion`) at the time of rendering so that it can be used later when the action is invoked.
+
+However, for this to happen, the captured variables are sent to the client and back to the server when the action is invoked. To prevent sensitive data from being exposed to the client, Next.js automatically encrypts the closed-over variables. A new private key is generated for each action every time a Next.js application is built. This means actions can only be invoked for a specific build.
+
+> **Good to know:** We don\'t recommend relying on encryption alone to prevent sensitive values from being exposed on the client.
+
+### Overwriting encryption keys (advanced)[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#overwriting-encryption-keys-advanced){aria-label="Link to this section" heading-link=""} {#overwriting-encryption-keys-advanced docs-heading=""}
+
+When **self-hosting** your Next.js application across multiple servers, each server instance may end up with a different encryption key, leading to potential inconsistencies.
+
+To mitigate this, you can overwrite the encryption key using the `process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` environment variable. Specifying this variable ensures that your encryption keys are persistent across builds, and all server instances use the same key.
+
+The key must be a base64-encoded value whose decoded length matches a valid AES key size (16, 24, or 32 bytes). Next.js generates 32-byte keys by default. You can generate a compatible key using your platform's cryptographic tools, for example:
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+openssl rand -base64 32
+```
+
+This is an advanced use case where consistent encryption behavior across multiple deployments is critical for your application. Follow standard security practices such as key rotation and signing. See the [Self-Hosting guide](/docs/app/guides/self-hosting#server-functions-encryption-key) for deployment-specific considerations.
+
+### Allowed origins (advanced)[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#allowed-origins-advanced){aria-label="Link to this section" heading-link=""} {#allowed-origins-advanced docs-heading=""}
+
+Since Server Actions can be invoked in a `<form>` element, this opens them up to [CSRF attacks[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://developer.mozilla.org/en-US/docs/Glossary/CSRF){rel="noopener noreferrer nofollow" target="_blank"}.
+
+Behind the scenes, Server Actions use the `POST` method, and only this HTTP method is allowed to invoke them. This prevents most CSRF vulnerabilities in modern browsers, particularly with [SameSite cookies[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://web.dev/articles/samesite-cookies-explained){rel="noopener noreferrer nofollow" target="_blank"} being the default.
+
+As an additional protection, Server Actions in Next.js also compare the [Origin header[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin){rel="noopener noreferrer nofollow" target="_blank"} to the [Host header[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host){rel="noopener noreferrer nofollow" target="_blank"} (or `X-Forwarded-Host`). If these don\'t match, the request will be aborted. In other words, Server Actions can only be invoked on the same host as the page that hosts it.
+
+For large applications that use reverse proxies or multi-layered backend architectures (where the server API differs from the production domain), it\'s recommended to use the configuration option [`serverActions.allowedOrigins`](/docs/app/api-reference/config/next-config-js/serverActions) option to specify a list of safe origins. The option accepts an array of strings.
+
+![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjE3IiBzdHlsZT0ibWFyZ2luLWxlZnQ6LTEuNXB4IiB2aWV3Ym94PSIwIDAgNTAgNTAiIHdpZHRoPSIxNyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNIDQzLjMzNTkzOCA0IEwgNi42Njc5NjkgNCBDIDUuMTk1MzEzIDQgNCA1LjE5NTMxMyA0IDYuNjY3OTY5IEwgNCA0My4zMzIwMzEgQyA0IDQ0LjgwNDY4OCA1LjE5NTMxMyA0NiA2LjY2Nzk2OSA0NiBMIDQzLjMzMjAzMSA0NiBDIDQ0LjgwNDY4OCA0NiA0NiA0NC44MDQ2ODggNDYgNDMuMzM1OTM4IEwgNDYgNi42Njc5NjkgQyA0NiA1LjE5NTMxMyA0NC44MDQ2ODggNCA0My4zMzU5MzggNCBaIE0gMjcgMzYuMTgzNTk0IEMgMjcgNDAuMTc5Njg4IDI0LjY1NjI1IDQyIDIxLjIzNDM3NSA0MiBDIDE4LjE0MDYyNSA0MiAxNS45MTAxNTYgMzkuOTI1NzgxIDE1IDM4IEwgMTguMTQ0NTMxIDM2LjA5NzY1NiBDIDE4Ljc1IDM3LjE3MTg3NSAxOS42NzE4NzUgMzggMjEgMzggQyAyMi4yNjk1MzEgMzggMjMgMzcuNTAzOTA2IDIzIDM1LjU3NDIxOSBMIDIzIDIzIEwgMjcgMjMgWiBNIDM1LjY3NTc4MSA0MiBDIDMyLjEzMjgxMyA0MiAzMC4xMjEwOTQgNDAuMjE0ODQ0IDI5IDM4IEwgMzIgMzYgQyAzMi44MTY0MDYgMzcuMzM1OTM4IDMzLjcwNzAzMSAzOC42MTMyODEgMzUuNTg5ODQ0IDM4LjYxMzI4MSBDIDM3LjE3MTg3NSAzOC42MTMyODEgMzggMzcuODI0MjE5IDM4IDM2LjczMDQ2OSBDIDM4IDM1LjQyNTc4MSAzNy4xNDA2MjUgMzQuOTYwOTM4IDM1LjQwMjM0NCAzNC4xOTkyMTkgTCAzNC40NDkyMTkgMzMuNzg5MDYzIEMgMzEuNjk1MzEzIDMyLjYxNzE4OCAyOS44NjMyODEgMzEuMTQ4NDM4IDI5Ljg2MzI4MSAyOC4wMzkwNjMgQyAyOS44NjMyODEgMjUuMTc5Njg4IDMyLjA0Njg3NSAyMyAzNS40NTMxMjUgMjMgQyAzNy44Nzg5MDYgMjMgMzkuNjIxMDk0IDIzLjg0Mzc1IDQwLjg3ODkwNiAyNi4wNTQ2ODggTCAzNy45MTAxNTYgMjcuOTY0ODQ0IEMgMzcuMjUzOTA2IDI2Ljc4OTA2MyAzNi41NTA3ODEgMjYuMzI4MTI1IDM1LjQ1MzEyNSAyNi4zMjgxMjUgQyAzNC4zMzU5MzggMjYuMzI4MTI1IDMzLjYyODkwNiAyNy4wMzkwNjMgMzMuNjI4OTA2IDI3Ljk2NDg0NCBDIDMzLjYyODkwNiAyOS4xMDkzNzUgMzQuMzM1OTM4IDI5LjU3MDMxMyAzNS45NzI2NTYgMzAuMjgxMjUgTCAzNi45MjU3ODEgMzAuNjkxNDA2IEMgNDAuMTcxODc1IDMyLjA3ODEyNSA0MiAzMy40OTYwOTQgNDIgMzYuNjgzNTk0IEMgNDIgNDAuMTE3MTg4IDM5LjMwMDc4MSA0MiAzNS42NzU3ODEgNDIgWiIgZmlsbD0iY3VycmVudENvbG9yIj48L3BhdGg+PC9zdmc+)
+
+[next.config.js]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+/** @type {import('next').NextConfig} */
+module.exports = {
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['my-proxy.com', '*.my-proxy.com'],
+    },
+  },
+}
+```
+
+Learn more about [Security and Server Actions[![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Ljc1IDRINnYxLjVoMy40NEw1LjQ3IDkuNDdsLS41My41M0w2IDExLjA2bC41My0uNTMgMy45Ny0zLjk3VjEwSDEyVjVhMSAxIDAgMCAwLTEtMXoiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)]{.inline-flex .not-prose}](https://nextjs.org/blog/security-nextjs-server-components-actions){rel="noopener noreferrer" target="_blank"}.
+
+### Avoiding side-effects during rendering[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#avoiding-side-effects-during-rendering){aria-label="Link to this section" heading-link=""} {#avoiding-side-effects-during-rendering docs-heading=""}
+
+Mutations (e.g. logging out users, updating databases, invalidating caches) should never be a side-effect, either in Server or Client Components. Next.js explicitly prevents setting cookies or triggering cache revalidation within render methods to avoid unintended side effects.
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+// BAD: Triggering a mutation during rendering
+export default async function Page({ searchParams }) {
+  if (searchParams.get('logout')) {
+    cookies().delete('AUTH_TOKEN')
+  }
+ 
+  return <UserProfile />
+}
+```
+
+Instead, you should use Server Actions to handle mutations.
+
+![](data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjE0IiB2aWV3Ym94PSIwIDAgNTEyIDUxMiIgd2lkdGg9IjE0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxyZWN0IGZpbGw9ImN1cnJlbnRDb2xvciIgaGVpZ2h0PSI1MTIiIHJ4PSI1MCIgd2lkdGg9IjUxMiI+PC9yZWN0PjxwYXRoIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibTMxNi45MzkgNDA3LjQyNHY1MC4wNjFjOC4xMzggNC4xNzIgMTcuNzYzIDcuMyAyOC44NzUgOS4zODZzMjIuODIzIDMuMTI5IDM1LjEzNSAzLjEyOWMxMS45OTkgMCAyMy4zOTctMS4xNDcgMzQuMTk2LTMuNDQyIDEwLjc5OS0yLjI5NCAyMC4yNjgtNi4wNzUgMjguNDA2LTExLjM0MiA4LjEzOC01LjI2NiAxNC41ODEtMTIuMTUgMTkuMzI4LTIwLjY1czcuMTIxLTE5LjAwNyA3LjEyMS0zMS41MjJjMC05LjA3NC0xLjM1Ni0xNy4wMjYtNC4wNjktMjMuODU3cy02LjYyNS0xMi45MDYtMTEuNzM4LTE4LjIyNWMtNS4xMTItNS4zMTktMTEuMjQyLTEwLjA5MS0xOC4zODktMTQuMzE1cy0xNS4yMDctOC4yMTMtMjQuMTgtMTEuOTY3Yy02LjU3My0yLjcxMi0xMi40NjgtNS4zNDUtMTcuNjg1LTcuOS01LjIxNy0yLjU1Ni05LjY1MS01LjE2My0xMy4zMDMtNy44MjItMy42NTItMi42Ni02LjQ2OS01LjQ3Ni04LjQ1MS04LjQ0OC0xLjk4Mi0yLjk3My0yLjk3NC02LjMzNi0yLjk3NC0xMC4wOTEgMC0zLjQ0MS44ODctNi41NDQgMi42NjEtOS4zMDhzNC4yNzgtNS4xMzYgNy41MTItNy4xMThjMy4yMzUtMS45ODEgNy4xOTktMy41MiAxMS44OTQtNC42MTUgNC42OTYtMS4wOTUgOS45MTItMS42NDIgMTUuNjUxLTEuNjQyIDQuMTczIDAgOC41ODEuMzEzIDEzLjIyNC45MzggNC42NDMuNjI2IDkuMzEyIDEuNTkxIDE0LjAwOCAyLjg5NCA0LjY5NSAxLjMwNCA5LjI1OSAyLjk0NyAxMy42OTQgNC45MjggNC40MzQgMS45ODIgOC41MjkgNC4yNzYgMTIuMjg1IDYuODg0di00Ni43NzZjLTcuNjE2LTIuOTItMTUuOTM3LTUuMDg0LTI0Ljk2Mi02LjQ5MnMtMTkuMzgxLTIuMTEyLTMxLjA2Ni0yLjExMmMtMTEuODk1IDAtMjMuMTYzIDEuMjc4LTMzLjgwNSAzLjgzM3MtMjAuMDA2IDYuNTQ0LTI4LjA5MyAxMS45NjdjLTguMDg2IDUuNDI0LTE0LjQ3NiAxMi4zMzMtMTkuMTcxIDIwLjcyOS00LjY5NSA4LjM5NS03LjA0MyAxOC40MzMtNy4wNDMgMzAuMTE0IDAgMTQuOTE0IDQuMzA0IDI3LjYzOCAxMi45MTIgMzguMTcyIDguNjA3IDEwLjUzMyAyMS42NzUgMTkuNDUgMzkuMjA0IDI2Ljc1MSA2Ljg4NiAyLjgxNiAxMy4zMDMgNS41NzkgMTkuMjUgOC4yOTFzMTEuMDg2IDUuNTI4IDE1LjQxNSA4LjQ0OGM0LjMzIDIuOTIgNy43NDcgNi4xMDEgMTAuMjUyIDkuNTQzIDIuNTA0IDMuNDQxIDMuNzU2IDcuMzUyIDMuNzU2IDExLjczMyAwIDMuMjMzLS43ODMgNi4yMzEtMi4zNDggOC45OTVzLTMuOTM5IDUuMTYyLTcuMTIxIDcuMTk2LTcuMTQ3IDMuNjI0LTExLjg5NCA0Ljc3MWMtNC43NDggMS4xNDgtMTAuMzAzIDEuNzIxLTE2LjY2OCAxLjcyMS0xMC44NTEgMC0yMS41OTctMS45MDMtMzIuMjQtNS43MS0xMC42NDItMy44MDYtMjAuNTAyLTkuNTE2LTI5LjU3OS0xNy4xM3ptLTg0LjE1OS0xMjMuMzQyaDY0LjIydi00MS4wODJoLTE3OXY0MS4wODJoNjMuOTA2djE4Mi45MThoNTAuODc0eiIgZmlsbD0idmFyKC0tZHMtYmFja2dyb3VuZC0xMDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[app/page.tsx]{.inline-block .truncate .break-normal .max-w-full .min-w-0}
+
+[]{.truncate .px-1.5 .inline-flex .items-center .justify-center .shrink-0}
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Im0xNS41NiA0LS41My41My04LjggOC44Yy0uNjguNjgtMS43OC42OC0yLjQ3IDBsLjUzLS41NC0uNTMuNTMtMi43OS0yLjc5TC40NCAxMCAxLjUgOC45NGwuNTMuNTMgMi44IDIuOGMuMS4wOS4yNS4wOS4zNSAwbDguNzktOC44LjUzLS41M3oiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PC9zdmc+)
+
+``` code-block-module__vF3MAa__pre
+// GOOD: Using Server Actions to handle mutations
+import { logout } from './actions'
+ 
+export default function Page() {
+  return (
+    <>
+      <UserProfile />
+      <form action={logout}>
+        <button type="submit">Logout</button>
+      </form>
+    </>
+  )
+}
+```
+
+> **Good to know:** Next.js uses `POST` requests to handle mutations. This prevents accidental side-effects from GET requests, reducing Cross-Site Request Forgery (CSRF) risks.
+
+## Auditing[![](data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjAuN2VtIiB2aWV3Ym94PSIwIDAgMTYgMTYiIHdpZHRoPSIwLjdlbSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS4yIj48cGF0aCBkPSJNOC45OTUsNy4wMDUgTDguOTk1LDcuMDA1YzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzVsLTEuOTksMS45OWMtMS4zNzQsMS4zNzQtMy42MDEsMS4zNzQtNC45NzUsMGwwLDBjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzUgbDEuNzQ4LTEuNjk4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCI+PC9wYXRoPjxwYXRoIGQ9Ik03LjAwNSw4Ljk5NSBMNy4wMDUsOC45OTVjLTEuMzc0LTEuMzc0LTEuMzc0LTMuNjAxLDAtNC45NzVsMS45OS0xLjk5YzEuMzc0LTEuMzc0LDMuNjAxLTEuMzc0LDQuOTc1LDBsMCwwYzEuMzc0LDEuMzc0LDEuMzc0LDMuNjAxLDAsNC45NzUgbC0xLjc0OCwxLjY5OCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiPjwvcGF0aD48L2c+PC9zdmc+)](#auditing){aria-label="Link to this section" heading-link=""} {#auditing docs-heading=""}
+
+If you\'re doing an audit of a Next.js project, here are a few things we recommend looking extra at:
+
+-   **Data Access Layer:** Is there an established practice for an isolated Data Access Layer? Verify that database packages and environment variables are not imported outside the Data Access Layer.
+-   **`"use client"` files:** Are the Component props expecting private data? Are the type signatures overly broad?
+-   **`"use server"` files:** Are the Action arguments validated in the action or inside the Data Access Layer? Is the user re-authorized inside the action? Does the action check ownership of the resource (authorization, not just authentication)? Are return values filtered to only what the client needs? Is database access delegated to a `server-only` Data Access Layer?
+-   **`/[param]/.`** Folders with brackets are user input. Are params validated?
+-   **`proxy.ts` and `route.ts`:** Have a lot of power. Spend extra time auditing these using traditional techniques. Perform Penetration Testing or Vulnerability Scanning regularly or in alignment with your team\'s software development lifecycle.
+
+## Next Steps {#next-steps .text-3xl .font-bold docs-heading=""}
+
+Learn more about the topics mentioned in this guide.
+
+[](/docs/app/guides/authentication){.not-prose .bg-gray-0 .shadow-(--ds-shadow-border) .group .block .space-y-2 .rounded-md .p-6 .pt-5 .transition-shadow .duration-300 .hover:shadow-(--ds-shadow-border-large)}
+
+### Authentication {#authentication .group-hover:text-gray-1000 .truncate .text-lg .font-medium .leading-snug}
+
+Learn how to implement authentication in your Next.js application.
+
+[](/docs/app/guides/content-security-policy){.not-prose .bg-gray-0 .shadow-(--ds-shadow-border) .group .block .space-y-2 .rounded-md .p-6 .pt-5 .transition-shadow .duration-300 .hover:shadow-(--ds-shadow-border-large)}
+
+### Content Security Policy {#content-security-policy .group-hover:text-gray-1000 .truncate .text-lg .font-medium .leading-snug}
+
+Learn how to set a Content Security Policy (CSP) for your Next.js application.
+
+[](/docs/app/guides/forms){.not-prose .bg-gray-0 .shadow-(--ds-shadow-border) .group .block .space-y-2 .rounded-md .p-6 .pt-5 .transition-shadow .duration-300 .hover:shadow-(--ds-shadow-border-large)}
+
+### Forms {#forms .group-hover:text-gray-1000 .truncate .text-lg .font-medium .leading-snug}
+
+Learn how to create forms in Next.js with React Server Actions.
+
+Was this helpful?
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik00IDl2N2gxLjVWOXptOCAwdjdoLTEuNVY5eiIgZmlsbD0idmFyKC0tZHMtYmx1ZS03MDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xLjUgOEE2LjUgNi41IDAgMSAxIDEzIDEyLjE1djIuMUE3Ljk5IDcuOTkgMCAwIDAgOCAwYTggOCAwIDAgMC01IDE0LjI1di0yLjFBNi41IDYuNSAwIDAgMSAxLjUgOE04IDE0LjVxLjc4IDAgMS41LS4xN3YxLjUzYTggOCAwIDAgMS0zIDB2LTEuNTNxLjcyLjE3IDEuNS4xN00zLjc5IDguMzdhMi4wNCAyLjA0IDAgMCAxIDIuOTIgMEw3LjggNy4zMmEzLjU0IDMuNTQgMCAwIDAtNS4wOCAwem02Ljk2LS42MmMtLjU3IDAtMS4xLjIzLTEuNDYuNjJMOC4yIDcuMzJhMy41NCAzLjU0IDAgMCAxIDUuMDggMEwxMi4yIDguMzdhMiAyIDAgMCAwLTEuNDYtLjYyTTYuMjUgMTJoMy41YTEuNzUgMS43NSAwIDEgMC0zLjUgMCIgZmlsbD0iY3VycmVudENvbG9yIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBkPSJNOCAwYTggOCAwIDEgMSAwIDE2QTggOCAwIDAgMSA4IDBtMCAxLjVhNi41IDYuNSAwIDEgMCAwIDEzIDYuNSA2LjUgMCAwIDAgMC0xM20wIDcuODhjMS40NyAwIDIuNzYuNzUgMy41MiAxLjg4bC4zNS41Mi0xLjA0LjctLjM0LS41MmEzIDMgMCAwIDAtNC45NyAwbC0uMzUuNTEtMS4wNC0uNy4zNS0uNTFBNC4yIDQuMiAwIDAgMSA4IDkuMzhNNS43NSA1LjVhMS4yNSAxLjI1IDAgMSAxIDAgMi41IDEuMjUgMS4yNSAwIDAgMSAwLTIuNW00LjUgMGExLjI1IDEuMjUgMCAxIDEgMCAyLjUgMS4yNSAxLjI1IDAgMCAxIDAtMi41IiBmaWxsPSJjdXJyZW50Q29sb3IiPjwvcGF0aD48L3N2Zz4=)
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBkPSJNOCAwYTggOCAwIDEgMSAwIDE2QTggOCAwIDAgMSA4IDBtMCAxLjVhNi41IDYuNSAwIDEgMCAwIDEzIDYuNSA2LjUgMCAwIDAgMC0xM20zLjg3IDguODMtLjM1LjUyYTQuMjQgNC4yNCAwIDAgMS03LjA0IDBsLS4zNS0uNTEgMS4wNC0uNy4zNS41MmEzIDMgMCAwIDAgNC45NyAwbC4zNC0uNTN6TTUuNzUgNS41YTEuMjUgMS4yNSAwIDEgMSAwIDIuNSAxLjI1IDEuMjUgMCAwIDEgMC0yLjVtNC41IDBhMS4yNSAxLjI1IDAgMSAxIDAgMi41IDEuMjUgMS4yNSAwIDAgMSAwLTIuNSIgZmlsbD0iY3VycmVudENvbG9yIj48L3BhdGg+PC9zdmc+)
+
+![](data:image/svg+xml;base64,PHN2ZyBkYXRhLXNsb3Q9ImdlaXN0LWljb24iIGhlaWdodD0iMTYiIHN0eWxlPSJjb2xvcjpjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAxNiAxNiIgd2lkdGg9IjE2Ij48cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNC41IDhhNi41IDYuNSAwIDEgMS0xMyAwIDYuNSA2LjUgMCAwIDEgMTMgME0xNiA4QTggOCAwIDEgMSAwIDhhOCA4IDAgMCAxIDE2IDBtLTExLjUuOTdoLS42MnYuNjNjMCAxLjg3IDEuOTMgMy4yNiA0LjEyIDMuMjZzNC4xMy0xLjM4IDQuMTMtMy4yNnYtLjYzSDQuNU04IDExLjYxYy0xLjQgMC0yLjM2LS42Ni0yLjcyLTEuMzhoNS40NGMtLjM2LjcyLTEuMzEgMS4zOC0yLjcyIDEuMzgiIGZpbGw9ImN1cnJlbnRDb2xvciIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+PHBhdGggY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNi4xNSA0LjkyIDUuMzcgMy41IDQuNiA0LjkybC0xLjYuMyAxLjEyIDEuMTdMMy45IDhsMS40Ny0uNyAxLjQ2LjctLjItMS42IDEuMTEtMS4xOHptNS4yNSAwLS43OC0xLjQyLS43NyAxLjQyLTEuNi4zIDEuMTIgMS4xN0w5LjE2IDhsMS40Ny0uNyAxLjQ2LjctLjItMS42TDEzIDUuMjF6IiBmaWxsPSJ2YXIoLS1kcy1hbWJlci04MDApIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjwvcGF0aD48L3N2Zz4=)
+
+[Send]{.truncate .inline-block .px-1.5}
