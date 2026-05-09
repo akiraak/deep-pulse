@@ -327,6 +327,8 @@ export interface ArticleEntry {
   filename: string;
   date: string;
   title: string;
+  /** 本体未生成（plan のみ存在）の下書き */
+  draft?: boolean;
 }
 
 /** Markdown ファイルの先頭 # 見出しを取得 */
@@ -356,17 +358,21 @@ function extractDescription(md: string): string {
   return SITE_DESCRIPTION;
 }
 
-/** output/ 内の .md ファイル一覧を取得（トップレベル & サブディレクトリ両対応） */
-export async function listArticles(): Promise<ArticleEntry[]> {
-  let files: string[];
+/** output/ 内の .md ファイル一覧を取得（トップレベル & サブディレクトリ両対応）
+ *
+ * @param includeDrafts true の場合、本体未生成（plan のみ）のディレクトリも下書きとして含める
+ */
+export async function listArticles(includeDrafts = false): Promise<ArticleEntry[]> {
+  let dirEntries;
   try {
-    files = await readdir(OUTPUT_DIR, { withFileTypes: true }) as unknown as string[];
+    dirEntries = await readdir(OUTPUT_DIR, { withFileTypes: true });
   } catch {
     return [];
   }
 
-  const dirEntries = await readdir(OUTPUT_DIR, { withFileTypes: true });
   const mdFiles: string[] = [];
+  // 下書き候補: 本体が無いが _plan.md だけあるサブディレクトリ
+  const draftCandidates: { filename: string; planPath: string }[] = [];
 
   for (const entry of dirEntries) {
     if (entry.isFile() && entry.name.endsWith(".md") && !entry.name.endsWith("_plan.md") && !entry.name.endsWith("_note.md")) {
@@ -374,15 +380,28 @@ export async function listArticles(): Promise<ArticleEntry[]> {
       mdFiles.push(entry.name);
     } else if (entry.isDirectory()) {
       // サブディレクトリ内の .md ファイル（新形式）
+      let subFiles: string[];
       try {
-        const subFiles = await readdir(path.join(OUTPUT_DIR, entry.name));
-        for (const sf of subFiles) {
-          if (sf.endsWith(".md") && !sf.endsWith("_plan.md") && !sf.endsWith("_note.md")) {
-            mdFiles.push(sf);
-          }
-        }
+        subFiles = await readdir(path.join(OUTPUT_DIR, entry.name));
       } catch {
-        // サブディレクトリの読み込み失敗はスキップ
+        continue;
+      }
+      let hasBody = false;
+      let planFile: string | null = null;
+      for (const sf of subFiles) {
+        if (!sf.endsWith(".md")) continue;
+        if (sf.endsWith("_plan.md")) {
+          planFile = sf;
+        } else if (!sf.endsWith("_note.md")) {
+          mdFiles.push(sf);
+          hasBody = true;
+        }
+      }
+      if (!hasBody && planFile && includeDrafts) {
+        draftCandidates.push({
+          filename: `${entry.name}.md`,
+          planPath: path.join(OUTPUT_DIR, entry.name, planFile),
+        });
       }
     }
   }
@@ -398,6 +417,20 @@ export async function listArticles(): Promise<ArticleEntry[]> {
       (resolvedPath ? await extractTitle(resolvedPath) : null) ?? filename;
     entries.push({ filename, date, title });
   }
+
+  for (const { filename, planPath } of draftCandidates) {
+    const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})_/);
+    const date = dateMatch?.[1] ?? "";
+    const rawTitle = (await extractTitle(planPath)) ?? filename;
+    const title = rawTitle.replace(/^(記事)?プラン[:：]\s*/, "");
+    entries.push({ filename, date, title, draft: true });
+  }
+
+  // 日付の降順、同日内はファイル名で安定ソート
+  entries.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return a.filename < b.filename ? -1 : 1;
+  });
 
   return entries;
 }

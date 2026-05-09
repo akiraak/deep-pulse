@@ -80,6 +80,7 @@ const ADMIN_CSS = `
   }
   .badge-blue { background: #dbeafe; color: #1e40af; }
   .badge-green { background: #dcfce7; color: #166534; }
+  .badge-yellow { background: #fef3c7; color: #92400e; }
   .breadcrumb {
     font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;
   }
@@ -109,6 +110,41 @@ const ADMIN_CSS = `
     display: flex; align-items: center; gap: 1rem;
   }
   .preview-bar a { color: #92400e; font-weight: 600; }
+  .ws-container { padding: 1rem 1.5rem; }
+  .workspace {
+    display: grid; grid-template-columns: 280px 1fr; gap: 1rem;
+  }
+  .workspace-nav {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 0.8rem 1rem; max-height: calc(100vh - 130px); overflow-y: auto;
+    font-size: 0.88rem;
+  }
+  .workspace-nav .ws-group-title {
+    font-size: 0.78rem; font-weight: 600; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-top: 0.8rem; margin-bottom: 0.3rem;
+  }
+  .workspace-nav .ws-group-title:first-child { margin-top: 0; }
+  .workspace-nav .ws-badge {
+    display: inline-block; padding: 0 0.4rem; border-radius: 10px;
+    background: #dbeafe; color: #1e40af; font-size: 0.7rem; font-weight: 500;
+    margin-left: 0.3rem;
+  }
+  .workspace-nav a {
+    display: block; padding: 0.4rem 0.6rem; border-radius: 4px;
+    color: #1e293b; word-break: break-all; line-height: 1.4;
+  }
+  .workspace-nav a:hover { background: #f1f5f9; text-decoration: none; }
+  .workspace-nav a.active { background: #dbeafe; color: #1e40af; font-weight: 600; }
+  .workspace-frame {
+    width: 100%; height: calc(100vh - 130px);
+    border: 1px solid #e2e8f0; border-radius: 6px; background: #fff;
+  }
+  @media (max-width: 800px) {
+    .workspace { grid-template-columns: 1fr; }
+    .workspace-frame { height: 70vh; }
+    .workspace-nav { max-height: none; }
+  }
   .markdown-body h1 { font-size: 1.4rem; margin: 1.5rem 0 0.8rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem; }
   .markdown-body h2 { font-size: 1.2rem; margin: 1.3rem 0 0.6rem; }
   .markdown-body h3 { font-size: 1.05rem; margin: 1rem 0 0.5rem; }
@@ -226,7 +262,7 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 
 /** ダッシュボード */
 async function handleDashboard(res: http.ServerResponse): Promise<void> {
-  const articles = await listArticles();
+  const articles = await listArticles(true);
   const latestDate = articles.length > 0 ? articles[0].date : "—";
 
   const body = `
@@ -261,11 +297,19 @@ async function handleDashboard(res: http.ServerResponse): Promise<void> {
         ${articles
           .slice(0, 5)
           .map(
-            (a) => `<tr>
+            (a) => {
+              const href = a.draft
+                ? `/articles/${encodeURIComponent(a.filename)}?file=plan`
+                : `/articles/${encodeURIComponent(a.filename)}`;
+              const draftBadge = a.draft
+                ? ' <span class="badge badge-yellow">下書き</span>'
+                : "";
+              return `<tr>
           <td>${escHtml(a.date)}</td>
-          <td><a href="/articles/${encodeURIComponent(a.filename)}/preview">${escHtml(a.title)}</a></td>
-          <td><a href="/articles/${encodeURIComponent(a.filename)}/sources" class="badge badge-blue">ソース</a></td>
-        </tr>`,
+          <td><a href="${href}">${escHtml(a.title)}</a>${draftBadge}</td>
+          <td><a href="${href}" class="badge badge-blue">開く</a></td>
+        </tr>`;
+            },
           )
           .join("\n")}
       </tbody>
@@ -303,7 +347,7 @@ function escapeHtml(s) {
 
 /** 記事一覧 */
 async function handleArticleList(res: http.ServerResponse): Promise<void> {
-  const articles = await listArticles();
+  const articles = await listArticles(true);
 
   // 各記事のファイルサイズを取得
   const rows: string[] = [];
@@ -331,14 +375,19 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
       }
     }
 
+    const href = a.draft
+      ? `/articles/${encodeURIComponent(a.filename)}?file=plan`
+      : `/articles/${encodeURIComponent(a.filename)}`;
+    const draftBadge = a.draft
+      ? ' <span class="badge badge-yellow">下書き</span>'
+      : "";
     rows.push(`<tr>
       <td>${escHtml(a.date)}</td>
-      <td><a href="/articles/${encodeURIComponent(a.filename)}/preview">${escHtml(a.title)}</a></td>
+      <td><a href="${href}">${escHtml(a.title)}</a>${draftBadge}</td>
       <td>${size}</td>
       <td>${sourceCount > 0 ? `<span class="badge badge-blue">${sourceCount} 件</span>` : "—"}</td>
       <td class="actions">
-        <a href="/articles/${encodeURIComponent(a.filename)}/preview" class="btn btn-secondary">プレビュー</a>
-        <a href="/articles/${encodeURIComponent(a.filename)}/sources" class="btn btn-secondary">ソース</a>
+        <a href="${href}" class="btn btn-secondary">開く</a>
       </td>
     </tr>`);
   }
@@ -361,140 +410,253 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
   send(res, 200, adminHtml("記事一覧", body));
 }
 
-/** 記事プレビュー */
-async function handlePreview(
-  res: http.ServerResponse,
-  filename: string,
-): Promise<void> {
-  // render.ts の renderArticle を動的に使う
-  const { renderArticle } = await import("./render.js");
-  const html = await renderArticle(filename, "/");
-  if (!html) {
-    send(res, 404, adminHtml("エラー", '<div class="container"><div class="alert alert-error">記事が見つかりません</div></div>'));
-    return;
-  }
+// --- 個別記事ワークスペース ---
 
-  // プレビューバーを挿入
-  const previewBar = `<div class="preview-bar">
-  <a href="/articles">← 管理画面に戻る</a>
-  <span>プレビュー表示: ${escHtml(filename)}</span>
-  <a href="/articles/${encodeURIComponent(filename)}/sources">ソース一覧</a>
-</div>`;
-  const modified = html.replace("<body>", `<body>${previewBar}`);
-  send(res, 200, modified);
+type WorkspaceFile =
+  | { kind: "body"; label: string; param: string }
+  | { kind: "plan"; label: string; param: string }
+  | { kind: "note"; label: string; param: string }
+  | { kind: "source"; label: string; param: string };
+
+interface WorkspaceInfo {
+  dir: string;
+  baseName: string;
+  files: WorkspaceFile[];
 }
 
-/** ソース一覧 */
-async function handleSourceList(
+/** ワークスペースに表示するファイル群を列挙 */
+async function listWorkspaceFiles(
+  filename: string,
+): Promise<WorkspaceInfo | null> {
+  const dir = await resolveArticleDir(filename);
+  if (!dir) return null;
+  const baseName = filename.replace(/\.md$/, "");
+
+  const files: WorkspaceFile[] = [];
+
+  const bodyPath = path.join(dir, filename);
+  try {
+    await stat(bodyPath);
+    files.push({ kind: "body", label: filename, param: "body" });
+  } catch {
+    // 本体未生成（下書き）
+  }
+
+  const planPath = path.join(dir, `${baseName}_plan.md`);
+  try {
+    await stat(planPath);
+    files.push({ kind: "plan", label: `${baseName}_plan.md`, param: "plan" });
+  } catch {
+    // no plan
+  }
+
+  const notePath = path.join(dir, `${baseName}_note.md`);
+  try {
+    await stat(notePath);
+    files.push({ kind: "note", label: `${baseName}_note.md`, param: "note" });
+  } catch {
+    // no note
+  }
+
+  // sources は新形式（サブディレクトリ）でのみ存在
+  if (dir !== OUTPUT_DIR) {
+    const sourcesDir = path.join(dir, "sources");
+    try {
+      const entries = (await readdir(sourcesDir))
+        .filter((f) => f.endsWith(".md"))
+        .sort();
+      for (const sf of entries) {
+        files.push({ kind: "source", label: sf, param: `sources/${sf}` });
+      }
+    } catch {
+      // no sources dir
+    }
+  }
+
+  return { dir, baseName, files };
+}
+
+/** iframe 内に流す最小 HTML（admin shell なし） */
+function miniHtml(title: string, body: string): string {
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(title)}</title>
+<style>${ADMIN_CSS}</style>
+</head>
+<body>
+<div class="container" style="margin-top:1rem;">
+${body}
+</div>
+</body>
+</html>`;
+}
+
+/** 個別記事ワークスペース（左ペイン + iframe） */
+async function handleArticleWorkspace(
+  req: http.IncomingMessage,
   res: http.ServerResponse,
   filename: string,
 ): Promise<void> {
-  const dir = await resolveArticleDir(filename);
-  if (!dir || dir === OUTPUT_DIR) {
+  const ws = await listWorkspaceFiles(filename);
+  if (!ws) {
     send(
       res,
-      200,
+      404,
       adminHtml(
-        "ソース一覧",
-        `<div class="container">
-          <div class="breadcrumb"><a href="/articles">記事一覧</a><span class="sep">/</span>${escHtml(filename)}<span class="sep">/</span>ソース</div>
-          <div class="card"><p>この記事にはソースディレクトリがありません</p></div>
-        </div>`,
+        "エラー",
+        '<div class="container"><div class="alert alert-error">記事が見つかりません</div></div>',
       ),
     );
     return;
   }
 
-  const sourcesDir = path.join(dir, "sources");
-  let sourceFiles: string[] = [];
-  try {
-    sourceFiles = (await readdir(sourcesDir)).sort();
-  } catch {
-    // no sources
+  if (ws.files.length === 0) {
+    send(
+      res,
+      404,
+      adminHtml(
+        "エラー",
+        '<div class="container"><div class="alert alert-error">表示できるファイルがありません</div></div>',
+      ),
+    );
+    return;
   }
 
-  const rows: string[] = [];
-  for (const sf of sourceFiles) {
-    let url = "—";
-    let title = sf;
-    try {
-      const content = await readFile(path.join(sourcesDir, sf), "utf-8");
-      const fm = parseFrontmatter(content);
-      if (fm.title) title = fm.title;
-      if (fm.url) url = `<a href="${escHtml(fm.url)}" target="_blank" rel="noopener">${escHtml(fm.url.length > 60 ? fm.url.slice(0, 57) + "..." : fm.url)}</a>`;
-    } catch {
-      // ignore
-    }
-    rows.push(`<tr>
-      <td>${escHtml(sf)}</td>
-      <td>${escHtml(title)}</td>
-      <td>${url}</td>
-      <td><a href="/articles/${encodeURIComponent(filename)}/sources/${encodeURIComponent(sf)}" class="btn btn-secondary">表示</a></td>
-    </tr>`);
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const requested = url.searchParams.get("file") ?? "body";
+  const fileQuery = ws.files.some((f) => f.param === requested)
+    ? requested
+    : ws.files[0].param;
+
+  const fileEnc = encodeURIComponent(filename);
+  const linkItem = (f: WorkspaceFile): string => {
+    const cls = f.param === fileQuery ? "active" : "";
+    return `<a href="/articles/${fileEnc}?file=${encodeURIComponent(f.param)}" class="${cls}">${escHtml(f.label)}</a>`;
+  };
+
+  const planFile = ws.files.find((f) => f.kind === "plan");
+  const noteFile = ws.files.find((f) => f.kind === "note");
+  const sourceFiles = ws.files.filter((f) => f.kind === "source");
+  const bodyFile = ws.files.find((f) => f.kind === "body");
+
+  const navParts: string[] = [];
+  if (bodyFile) {
+    navParts.push(`<div class="ws-group-title">記事</div>`);
+    navParts.push(linkItem(bodyFile));
   }
+  if (planFile) {
+    navParts.push(`<div class="ws-group-title">プラン</div>`);
+    navParts.push(linkItem(planFile));
+  }
+  if (noteFile) {
+    navParts.push(`<div class="ws-group-title">note</div>`);
+    navParts.push(linkItem(noteFile));
+  }
+  if (sourceFiles.length > 0) {
+    navParts.push(
+      `<div class="ws-group-title">sources <span class="ws-badge">${sourceFiles.length}</span></div>`,
+    );
+    for (const sf of sourceFiles) {
+      navParts.push(linkItem(sf));
+    }
+  }
+
+  const iframeSrc = `/articles/${fileEnc}/render?file=${encodeURIComponent(fileQuery)}`;
 
   const body = `
-<div class="container">
+<div class="ws-container">
   <div class="breadcrumb">
     <a href="/articles">記事一覧</a><span class="sep">/</span>
-    <a href="/articles/${encodeURIComponent(filename)}/preview">${escHtml(filename)}</a><span class="sep">/</span>
-    ソース
+    ${escHtml(filename)}
   </div>
-  <h1>ソース一覧（${sourceFiles.length} 件）</h1>
-  ${
-    sourceFiles.length === 0
-      ? '<div class="card"><p>ソースファイルがありません</p></div>'
-      : `<div class="card" style="overflow-x:auto;">
-    <table>
-      <thead><tr><th>ファイル</th><th>タイトル</th><th>URL</th><th></th></tr></thead>
-      <tbody>${rows.join("\n")}</tbody>
-    </table>
-  </div>`
-  }
+  <div class="workspace">
+    <nav class="workspace-nav">
+${navParts.join("\n")}
+    </nav>
+    <iframe class="workspace-frame" src="${iframeSrc}"></iframe>
+  </div>
 </div>`;
 
-  send(res, 200, adminHtml("ソース一覧", body));
+  send(res, 200, adminHtml(filename, body));
 }
 
-/** 個別ソース表示 */
-async function handleSourceDetail(
+/** ワークスペース右ペイン用: ファイル種別ごとに最小 HTML を返す */
+async function handleArticleRender(
+  req: http.IncomingMessage,
   res: http.ServerResponse,
   filename: string,
-  sourceName: string,
 ): Promise<void> {
   const dir = await resolveArticleDir(filename);
-  if (!dir || dir === OUTPUT_DIR) {
-    send(res, 404, adminHtml("エラー", '<div class="container"><div class="alert alert-error">ソースが見つかりません</div></div>'));
+  if (!dir) {
+    send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">記事が見つかりません</div>'));
+    return;
+  }
+  const baseName = filename.replace(/\.md$/, "");
+
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const fileQuery = url.searchParams.get("file") ?? "body";
+
+  // 記事本体: 公開サイトと同じ HTML をそのまま流す
+  if (fileQuery === "body") {
+    const { renderArticle } = await import("./render.js");
+    const html = await renderArticle(filename, "/articles");
+    if (!html) {
+      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">記事が見つかりません</div>'));
+      return;
+    }
+    send(res, 200, html);
     return;
   }
 
-  const sourcePath = path.join(dir, "sources", sourceName);
-  let content: string;
-  try {
-    content = await readFile(sourcePath, "utf-8");
-  } catch {
-    send(res, 404, adminHtml("エラー", '<div class="container"><div class="alert alert-error">ソースファイルが見つかりません</div></div>'));
+  // plan / note: marked でレンダリング
+  if (fileQuery === "plan" || fileQuery === "note") {
+    const target = path.join(dir, `${baseName}_${fileQuery}.md`);
+    let content: string;
+    try {
+      content = await readFile(target, "utf-8");
+    } catch {
+      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">ファイルが見つかりません</div>'));
+      return;
+    }
+    const rendered = await marked.parse(content);
+    send(res, 200, miniHtml(filename, `<div class="markdown-body">${rendered}</div>`));
     return;
   }
 
-  const fm = parseFrontmatter(content);
-
-  const body = `
-<div class="container">
-  <div class="breadcrumb">
-    <a href="/articles">記事一覧</a><span class="sep">/</span>
-    <a href="/articles/${encodeURIComponent(filename)}/preview">${escHtml(filename)}</a><span class="sep">/</span>
-    <a href="/articles/${encodeURIComponent(filename)}/sources">ソース</a><span class="sep">/</span>
-    ${escHtml(sourceName)}
-  </div>
-  <h1>${escHtml(fm.title ?? sourceName)}</h1>
+  // sources/<name>: frontmatter 強調 + 本文 pre 表示
+  if (fileQuery.startsWith("sources/")) {
+    const sourceName = fileQuery.slice("sources/".length);
+    if (!sourceName || sourceName.includes("..") || sourceName.includes("/")) {
+      send(res, 400, miniHtml("Bad Request", '<div class="alert alert-error">不正なリクエスト</div>'));
+      return;
+    }
+    const sourcesDir = path.join(dir, "sources");
+    const sourcePath = path.join(sourcesDir, sourceName);
+    const rel = path.relative(sourcesDir, sourcePath);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+      send(res, 400, miniHtml("Bad Request", '<div class="alert alert-error">不正なリクエスト</div>'));
+      return;
+    }
+    let content: string;
+    try {
+      content = await readFile(sourcePath, "utf-8");
+    } catch {
+      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">ソースファイルが見つかりません</div>'));
+      return;
+    }
+    const fm = parseFrontmatter(content);
+    const body = `
+  <h1 style="font-size:1.2rem;margin-bottom:0.5rem;">${escHtml(fm.title ?? sourceName)}</h1>
   ${fm.url ? `<p style="margin-bottom:1rem;"><a href="${escHtml(fm.url)}" target="_blank" rel="noopener">${escHtml(fm.url)}</a></p>` : ""}
-  <div class="card">
-    <div class="source-content">${escHtml(content)}</div>
-  </div>
-</div>`;
+  <div class="source-content">${escHtml(content)}</div>`;
+    send(res, 200, miniHtml(fm.title ?? sourceName, body));
+    return;
+  }
 
-  send(res, 200, adminHtml(fm.title ?? sourceName, body));
+  send(res, 400, miniHtml("Bad Request", '<div class="alert alert-error">不正なリクエスト</div>'));
 }
 
 /** プラン一覧 */
@@ -1117,40 +1279,27 @@ export async function handleAdmin(
     return;
   }
 
-  // /articles/:filename/preview
-  const previewMatch = pathname.match(/^\/articles\/([^/]+)\/preview$/);
-  if (previewMatch) {
-    const filename = decodeURIComponent(previewMatch[1]);
+  // /articles/:filename/render（iframe 用、admin shell なし）
+  const renderMatch = pathname.match(/^\/articles\/([^/]+)\/render$/);
+  if (renderMatch) {
+    const filename = renderMatch[1];
     if (filename.includes("..")) {
       send(res, 400, "不正なリクエストです");
       return;
     }
-    await handlePreview(res, filename);
+    await handleArticleRender(req, res, filename);
     return;
   }
 
-  // /articles/:filename/sources/:source
-  const sourceDetailMatch = pathname.match(/^\/articles\/([^/]+)\/sources\/([^/]+)$/);
-  if (sourceDetailMatch) {
-    const filename = decodeURIComponent(sourceDetailMatch[1]);
-    const sourceName = decodeURIComponent(sourceDetailMatch[2]);
-    if (filename.includes("..") || sourceName.includes("..")) {
-      send(res, 400, "不正なリクエストです");
-      return;
-    }
-    await handleSourceDetail(res, filename, sourceName);
-    return;
-  }
-
-  // /articles/:filename/sources
-  const sourcesMatch = pathname.match(/^\/articles\/([^/]+)\/sources$/);
-  if (sourcesMatch) {
-    const filename = decodeURIComponent(sourcesMatch[1]);
+  // /articles/:filename（個別記事ワークスペース）
+  const workspaceMatch = pathname.match(/^\/articles\/([^/]+)$/);
+  if (workspaceMatch) {
+    const filename = workspaceMatch[1];
     if (filename.includes("..")) {
       send(res, 400, "不正なリクエストです");
       return;
     }
-    await handleSourceList(res, filename);
+    await handleArticleWorkspace(req, res, filename);
     return;
   }
 
