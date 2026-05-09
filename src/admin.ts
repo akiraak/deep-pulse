@@ -1,8 +1,8 @@
 // 管理画面モジュール
-// 記事の一覧・プレビュー・ソース閲覧・削除・ビルド実行を提供する
+// 記事の一覧・プレビュー・ソース閲覧・ビルド実行を提供する
 
 import http from "http";
-import { readFile, readdir, rm, stat, unlink } from "fs/promises";
+import { readFile, readdir, stat, unlink } from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import { marked } from "marked";
@@ -71,8 +71,6 @@ const ADMIN_CSS = `
   }
   .btn-primary { background: #2563eb; color: #fff; }
   .btn-primary:hover { background: #1d4ed8; text-decoration: none; }
-  .btn-danger { background: #dc2626; color: #fff; }
-  .btn-danger:hover { background: #b91c1c; text-decoration: none; }
   .btn-secondary { background: #e2e8f0; color: #1e293b; }
   .btn-secondary:hover { background: #cbd5e1; text-decoration: none; }
   .actions { display: flex; gap: 0.5rem; }
@@ -341,7 +339,6 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
       <td class="actions">
         <a href="/articles/${encodeURIComponent(a.filename)}/preview" class="btn btn-secondary">プレビュー</a>
         <a href="/articles/${encodeURIComponent(a.filename)}/sources" class="btn btn-secondary">ソース</a>
-        <button class="btn btn-danger" onclick="confirmDelete('${escHtml(a.filename)}')">削除</button>
       </td>
     </tr>`);
   }
@@ -359,24 +356,7 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
     </table>
   </div>`
   }
-</div>
-<script>
-function confirmDelete(filename) {
-  if (confirm('「' + filename + '」を削除しますか？\\nこの操作は元に戻せません。')) {
-    fetch('/articles/' + encodeURIComponent(filename) + '/delete', { method: 'POST' })
-      .then(r => r.json())
-      .then(d => {
-        if (d.success) {
-          alert('削除しました');
-          location.reload();
-        } else {
-          alert('削除に失敗しました: ' + d.error);
-        }
-      })
-      .catch(() => alert('通信エラー'));
-  }
-}
-</script>`;
+</div>`;
 
   send(res, 200, adminHtml("記事一覧", body));
 }
@@ -515,47 +495,6 @@ async function handleSourceDetail(
 </div>`;
 
   send(res, 200, adminHtml(fm.title ?? sourceName, body));
-}
-
-/** 記事削除 */
-async function handleDelete(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  filename: string,
-): Promise<void> {
-  await readBody(req);
-
-  // パストラバーサル防止
-  if (filename.includes("..") || filename.includes("/")) {
-    send(res, 400, JSON.stringify({ success: false, error: "不正なファイル名" }), "application/json");
-    return;
-  }
-
-  const dir = await resolveArticleDir(filename);
-  if (!dir) {
-    send(res, 404, JSON.stringify({ success: false, error: "記事が見つかりません" }), "application/json");
-    return;
-  }
-
-  try {
-    if (dir !== OUTPUT_DIR) {
-      // サブディレクトリごと削除
-      await rm(dir, { recursive: true });
-    } else {
-      // トップレベルの .md ファイルのみ削除
-      await rm(path.join(OUTPUT_DIR, filename));
-      // _plan.md があれば削除
-      const planFile = path.join(OUTPUT_DIR, filename.replace(/\.md$/, "_plan.md"));
-      try {
-        await rm(planFile);
-      } catch {
-        // plan がなくてもエラーにしない
-      }
-    }
-    send(res, 200, JSON.stringify({ success: true }), "application/json");
-  } catch (err) {
-    send(res, 500, JSON.stringify({ success: false, error: String(err) }), "application/json");
-  }
 }
 
 /** プラン一覧 */
@@ -1120,13 +1059,6 @@ export async function handleAdmin(
   // POST /tts/test
   if (method === "POST" && pathname === "/tts/test") {
     await handleTtsTest(req, res);
-    return;
-  }
-
-  // POST /articles/:filename/delete
-  const deleteMatch = pathname.match(/^\/articles\/([^/]+)\/delete$/);
-  if (method === "POST" && deleteMatch) {
-    await handleDelete(req, res, decodeURIComponent(deleteMatch[1]));
     return;
   }
 
