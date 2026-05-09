@@ -19,7 +19,9 @@ deep-pulse はニュースを深く考察した記事を Markdown として生�
 
 ```bash
 npm install          # 依存パッケージのインストール
-npm run serve        # HTML サーバー起動 (http://localhost:3000)
+npm run serve        # 公開サイト用サーバー起動 (http://localhost:3000)
+npm run admin        # 管理画面サーバー起動 (http://localhost:3001)
+npm run files        # output 配下の md ファイルビューア起動 (http://localhost:3002)
 npm run build        # TypeScript コンパイル
 npm start            # コンパイル済みコードの実行
 npm run build:site   # 静的サイトビルド (dist_site/ に出力)
@@ -27,11 +29,23 @@ npm run lint         # ESLint
 npm run format       # Prettier
 ```
 
+3 つのサーバーは独立しており同時起動できる:
+
+| サーバー | ポート | 起動 | 役割 |
+|---------|-------|------|------|
+| 記事配信 | 3000 | `npm run serve` / `./server.sh` | 公開サイトと同じ HTML で記事を配信 |
+| 管理画面 | 3001 | `npm run admin` / `./admin.sh` | 記事一覧・プレビュー・ソース・プラン・TTS |
+| ファイルビューア | 3002 | `npm run files` / `./files.sh` | `output/` 配下の **全 .md** を素のファイルとして閲覧（記事本体・`_plan.md`・`_note.md`・`sources/*.md`） |
+
+ポートは環境変数 `PORT` / `ADMIN_PORT` / `FILES_PORT` で変更可能。
+
 ## Architecture
 
-- `src/index.ts` — エントリーポイント。サーバーを起動する
+- `src/index.ts` — 公開サイトサーバーのエントリーポイント
 - `src/render.ts` — Markdown → HTML 変換（marked 使用）。OGP タグ・ヘッダー・パンくず生成を含む
 - `src/server.ts` — HTTP サーバー。記事一覧・個別記事を HTML で配信
+- `src/admin_index.ts` / `src/admin_server.ts` / `src/admin.ts` — 管理画面（3001）
+- `src/files_index.ts` / `src/files_server.ts` / `src/files.ts` — ファイルビューア（3002）
 - `scripts/build_static.ts` — 静的サイトビルド。GitHub Pages 用。`ogp.png` も `dist_site/` にコピーする
 - `.github/workflows/pages.yml` — push 時に GitHub Pages へ自動デプロイ
 

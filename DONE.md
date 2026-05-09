@@ -18,3 +18,4 @@
 - [x] 音声読み上げ機能を付ける → [plans/text-to-speech.md](plans/text-to-speech.md)
 - [x] 動的サーバー（npm run serve）で音声プレイヤー表示・MP3配信に対応
 - [x] 記事にサイドバーを付け H2, H3 などの見出しを表示 → [plans/article-sidebar-toc.md](plans/article-sidebar-toc.md)
+- [x] output の各mdファイルが見れる管理画面を作る。既存のサーバーとは別 → [plans/output-files-viewer.md](plans/output-files-viewer.md)

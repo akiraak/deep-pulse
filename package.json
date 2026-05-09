@@ -10,6 +10,7 @@
     "dev": "tsx src/index.ts",
     "serve": "tsx src/index.ts",
     "admin": "tsx src/admin_index.ts",
+    "files": "tsx src/files_index.ts",
     "build:site": "tsx scripts/build_static.ts",
     "generate:audio": "tsx --env-file=.env scripts/generate_audio.ts",
     "lint": "eslint src/",
