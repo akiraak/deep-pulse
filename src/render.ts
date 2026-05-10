@@ -435,24 +435,46 @@ export async function listArticles(includeDrafts = false): Promise<ArticleEntry[
   return entries;
 }
 
-/** 記事ファイルの実パスを解決（トップレベル or サブディレクトリ） */
+/** 記事ファイルの実パスを解決（トップレベル or サブディレクトリ）
+ *
+ * 解決順:
+ *   1. `output/<baseName>/<filename>` （新形式：ディレクトリ名 = 記事名）
+ *   2. `output/<filename>` （旧形式：トップレベル）
+ *   3. `output/*\/<filename>` （バリアント：同一ディレクトリ内の別名ファイル）
+ */
 async function resolveArticlePath(filename: string): Promise<string | null> {
-  // サブディレクトリ内を先にチェック（新形式優先）
   const baseName = filename.replace(/\.md$/, "");
   const subDirPath = path.join(OUTPUT_DIR, baseName, filename);
   try {
     await readFile(subDirPath, "utf-8");
     return subDirPath;
   } catch {
-    // フォールバック: トップレベル
+    // fallthrough
   }
   const topLevelPath = path.join(OUTPUT_DIR, filename);
   try {
     await readFile(topLevelPath, "utf-8");
     return topLevelPath;
   } catch {
-    return null;
+    // fallthrough
   }
+  // バリアント（例: <baseName>_v2.md）が別ディレクトリにある場合の横断検索
+  try {
+    const dirEntries = await readdir(OUTPUT_DIR, { withFileTypes: true });
+    for (const entry of dirEntries) {
+      if (!entry.isDirectory()) continue;
+      const candidate = path.join(OUTPUT_DIR, entry.name, filename);
+      try {
+        await readFile(candidate, "utf-8");
+        return candidate;
+      } catch {
+        // continue
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 /** 記事一覧の HTML を生成 */

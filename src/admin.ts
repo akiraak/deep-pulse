@@ -207,25 +207,46 @@ function formatBytes(bytes: number): string {
 
 // --- 記事ディレクトリ解決 ---
 
-/** 記事の格納ディレクトリを返す（サブディレクトリ or トップレベル） */
+/** 記事の格納ディレクトリを返す（サブディレクトリ or トップレベル）
+ *
+ * 解決順:
+ *   1. `output/<baseName>/` が存在すればそれを返す（新形式）
+ *   2. `output/<filename>` がトップレベルにあれば `output/` を返す（旧形式）
+ *   3. `output/*\/<filename>` を持つディレクトリを横断検索（バリアント対応）
+ */
 async function resolveArticleDir(filename: string): Promise<string | null> {
   const baseName = filename.replace(/\.md$/, "");
-  // サブディレクトリ形式を先にチェック
   const subDir = path.join(OUTPUT_DIR, baseName);
   try {
     const s = await stat(subDir);
     if (s.isDirectory()) return subDir;
   } catch {
-    // フォールバック
+    // fallthrough
   }
-  // トップレベル形式: ディレクトリなし
   const topLevel = path.join(OUTPUT_DIR, filename);
   try {
     await stat(topLevel);
     return OUTPUT_DIR;
   } catch {
-    return null;
+    // fallthrough
   }
+  // バリアント（例: <baseName>_v2.md）が別ディレクトリにある場合の横断検索
+  try {
+    const dirEntries = await readdir(OUTPUT_DIR, { withFileTypes: true });
+    for (const entry of dirEntries) {
+      if (!entry.isDirectory()) continue;
+      const candidate = path.join(OUTPUT_DIR, entry.name, filename);
+      try {
+        await stat(candidate);
+        return path.join(OUTPUT_DIR, entry.name);
+      } catch {
+        // continue
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 // --- YAML フロントマター解析 ---
@@ -424,7 +445,12 @@ interface WorkspaceInfo {
   files: WorkspaceFile[];
 }
 
-/** ワークスペースに表示するファイル群を列挙 */
+/** ワークスペースに表示するファイル群を列挙
+ *
+ * 同一ディレクトリ内のすべての `.md` を本体 / プラン / note に分類して列挙する。
+ * 本体が複数ある場合（v2 などのバリアント）はすべて表示し、URL のファイル名と
+ * 一致するものを「body」パラメータ（デフォルト選択）に割り当てる。
+ */
 async function listWorkspaceFiles(
   filename: string,
 ): Promise<WorkspaceInfo | null> {
@@ -432,31 +458,37 @@ async function listWorkspaceFiles(
   if (!dir) return null;
   const baseName = filename.replace(/\.md$/, "");
 
+  // ディレクトリ内の .md を全部読む
+  let dirFiles: string[];
+  try {
+    dirFiles = (await readdir(dir)).filter((f) => f.endsWith(".md")).sort();
+  } catch {
+    dirFiles = [];
+  }
+
+  const bodyFiles = dirFiles.filter(
+    (f) => !f.endsWith("_plan.md") && !f.endsWith("_note.md"),
+  );
+  const planFiles = dirFiles.filter((f) => f.endsWith("_plan.md"));
+  const noteFiles = dirFiles.filter((f) => f.endsWith("_note.md"));
+
   const files: WorkspaceFile[] = [];
 
-  const bodyPath = path.join(dir, filename);
-  try {
-    await stat(bodyPath);
-    files.push({ kind: "body", label: filename, param: "body" });
-  } catch {
-    // 本体未生成（下書き）
+  // 本体：URL filename と一致するものを `body` パラメータに、それ以外は filename を param に
+  for (const f of bodyFiles) {
+    const param = f === filename ? "body" : f;
+    files.push({ kind: "body", label: f, param });
   }
 
-  const planPath = path.join(dir, `${baseName}_plan.md`);
-  try {
-    await stat(planPath);
-    files.push({ kind: "plan", label: `${baseName}_plan.md`, param: "plan" });
-  } catch {
-    // no plan
-  }
+  // プラン：最初の1件は後方互換のため `plan` パラメータ、残りは filename
+  planFiles.forEach((f, i) => {
+    files.push({ kind: "plan", label: f, param: i === 0 ? "plan" : f });
+  });
 
-  const notePath = path.join(dir, `${baseName}_note.md`);
-  try {
-    await stat(notePath);
-    files.push({ kind: "note", label: `${baseName}_note.md`, param: "note" });
-  } catch {
-    // no note
-  }
+  // note：同上
+  noteFiles.forEach((f, i) => {
+    files.push({ kind: "note", label: f, param: i === 0 ? "note" : f });
+  });
 
   // sources は新形式（サブディレクトリ）でのみ存在
   if (dir !== OUTPUT_DIR) {
@@ -537,23 +569,23 @@ async function handleArticleWorkspace(
     return `<a href="/articles/${fileEnc}?file=${encodeURIComponent(f.param)}" class="${cls}">${escHtml(f.label)}</a>`;
   };
 
-  const planFile = ws.files.find((f) => f.kind === "plan");
-  const noteFile = ws.files.find((f) => f.kind === "note");
+  const bodyFiles = ws.files.filter((f) => f.kind === "body");
+  const planFiles = ws.files.filter((f) => f.kind === "plan");
+  const noteFiles = ws.files.filter((f) => f.kind === "note");
   const sourceFiles = ws.files.filter((f) => f.kind === "source");
-  const bodyFile = ws.files.find((f) => f.kind === "body");
 
   const navParts: string[] = [];
-  if (bodyFile) {
+  if (bodyFiles.length > 0) {
     navParts.push(`<div class="ws-group-title">記事</div>`);
-    navParts.push(linkItem(bodyFile));
+    for (const f of bodyFiles) navParts.push(linkItem(f));
   }
-  if (planFile) {
+  if (planFiles.length > 0) {
     navParts.push(`<div class="ws-group-title">プラン</div>`);
-    navParts.push(linkItem(planFile));
+    for (const f of planFiles) navParts.push(linkItem(f));
   }
-  if (noteFile) {
+  if (noteFiles.length > 0) {
     navParts.push(`<div class="ws-group-title">note</div>`);
-    navParts.push(linkItem(noteFile));
+    for (const f of noteFiles) navParts.push(linkItem(f));
   }
   if (sourceFiles.length > 0) {
     navParts.push(
@@ -583,7 +615,16 @@ ${navParts.join("\n")}
   send(res, 200, adminHtml(filename, body));
 }
 
-/** ワークスペース右ペイン用: ファイル種別ごとに最小 HTML を返す */
+/** ワークスペース右ペイン用: ファイル種別ごとに最小 HTML を返す
+ *
+ * 受け付ける `?file=` パラメータ:
+ *   - `body`             URL のファイル名を本体としてレンダリング
+ *   - `plan`             ディレクトリ内の最初の `_plan.md` をレンダリング
+ *   - `note`             ディレクトリ内の最初の `_note.md` をレンダリング
+ *   - `sources/<name>`   sources/ 配下のファイルをレンダリング
+ *   - `<filename>.md`    ディレクトリ内のそのファイルをレンダリング（バリアント対応）
+ *                         `_plan.md` / `_note.md` は marked、その他は記事本体として扱う
+ */
 async function handleArticleRender(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -594,39 +635,11 @@ async function handleArticleRender(
     send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">記事が見つかりません</div>'));
     return;
   }
-  const baseName = filename.replace(/\.md$/, "");
 
   const url = new URL(req.url ?? "/", "http://localhost");
   const fileQuery = url.searchParams.get("file") ?? "body";
 
-  // 記事本体: 公開サイトと同じ HTML をそのまま流す
-  if (fileQuery === "body") {
-    const { renderArticle } = await import("./render.js");
-    const html = await renderArticle(filename, "/articles");
-    if (!html) {
-      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">記事が見つかりません</div>'));
-      return;
-    }
-    send(res, 200, html);
-    return;
-  }
-
-  // plan / note: marked でレンダリング
-  if (fileQuery === "plan" || fileQuery === "note") {
-    const target = path.join(dir, `${baseName}_${fileQuery}.md`);
-    let content: string;
-    try {
-      content = await readFile(target, "utf-8");
-    } catch {
-      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">ファイルが見つかりません</div>'));
-      return;
-    }
-    const rendered = await marked.parse(content);
-    send(res, 200, miniHtml(filename, `<div class="markdown-body">${rendered}</div>`));
-    return;
-  }
-
-  // sources/<name>: frontmatter 強調 + 本文 pre 表示
+  // sources/<name>
   if (fileQuery.startsWith("sources/")) {
     const sourceName = fileQuery.slice("sources/".length);
     if (!sourceName || sourceName.includes("..") || sourceName.includes("/")) {
@@ -656,7 +669,54 @@ async function handleArticleRender(
     return;
   }
 
-  send(res, 400, miniHtml("Bad Request", '<div class="alert alert-error">不正なリクエスト</div>'));
+  // ターゲットファイル名（dir 相対）を決定
+  let targetName: string | null = null;
+  if (fileQuery === "body") {
+    targetName = filename;
+  } else if (fileQuery === "plan" || fileQuery === "note") {
+    const suffix = `_${fileQuery}.md`;
+    try {
+      const dirFiles = await readdir(dir);
+      targetName = dirFiles.find((f) => f.endsWith(suffix)) ?? null;
+    } catch {
+      targetName = null;
+    }
+  } else if (
+    fileQuery.endsWith(".md") &&
+    !fileQuery.includes("/") &&
+    !fileQuery.includes("..")
+  ) {
+    targetName = fileQuery;
+  }
+
+  if (!targetName) {
+    send(res, 400, miniHtml("Bad Request", '<div class="alert alert-error">不正なリクエスト</div>'));
+    return;
+  }
+
+  // _plan.md / _note.md は marked、それ以外は記事本体扱い
+  if (targetName.endsWith("_plan.md") || targetName.endsWith("_note.md")) {
+    const targetPath = path.join(dir, targetName);
+    let content: string;
+    try {
+      content = await readFile(targetPath, "utf-8");
+    } catch {
+      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">ファイルが見つかりません</div>'));
+      return;
+    }
+    const rendered = await marked.parse(content);
+    send(res, 200, miniHtml(targetName, `<div class="markdown-body">${rendered}</div>`));
+    return;
+  }
+
+  // 本体ファイル：公開サイトと同じ HTML をそのまま流す
+  const { renderArticle } = await import("./render.js");
+  const html = await renderArticle(targetName, "/articles");
+  if (!html) {
+    send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">記事が見つかりません</div>'));
+    return;
+  }
+  send(res, 200, html);
 }
 
 /** プラン一覧 */
