@@ -2,7 +2,6 @@
 
 2026年5月4日、Anthropic が Blackstone・Hellman & Friedman・Goldman Sachs と組んで **15億ドルの新会社** を立ち上げた。やることはシンプルで、Anthropic の Applied AI エンジニアを顧客企業の現場に常駐させ、Claude を業務の中枢に組み込んだシステムをその場で作り、長期的に運用までサポートする。報告書を納品して帰る従来のコンサルとは違い、稼働するシステムごと納品する。狙いは中堅企業——年商数百億〜数千億円の、既存コンサルが手薄だった帯域だ。最初の顧客は出資する PE 各社が保有する数百社のポートフォリオ企業で、最初から確保されている。
 
-> 元記事（グラフ・相関図付き）はこちら: https://akiraak.github.io/deep-pulse/articles/2026-05-09_Anthropic-WallStreet-AI%E6%96%B0%E4%BC%9A%E7%A4%BE.html
 
 ## 読みどころ
 
