@@ -13,6 +13,7 @@
     "files": "tsx src/files_index.ts",
     "build:site": "tsx scripts/build_static.ts",
     "generate:audio": "tsx --env-file=.env scripts/generate_audio.ts",
+    "note:assets": "tsx scripts/generate_note_assets.ts",
     "lint": "eslint src/",
     "format": "prettier --write 'src/**/*.ts'"
   },
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "playwright": "^1.60.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
