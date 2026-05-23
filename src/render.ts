@@ -386,15 +386,18 @@ export async function listArticles(includeDrafts = false): Promise<ArticleEntry[
       } catch {
         continue;
       }
+      // 本体はディレクトリ名と一致する .md のみ。
+      // それ以外（_plan / _note / _note_full / _org など補助ファイル）は一覧に含めない。
+      const bodyName = `${entry.name}.md`;
       let hasBody = false;
       let planFile: string | null = null;
       for (const sf of subFiles) {
         if (!sf.endsWith(".md")) continue;
-        if (sf.endsWith("_plan.md")) {
-          planFile = sf;
-        } else if (!sf.endsWith("_note.md")) {
+        if (sf === bodyName) {
           mdFiles.push(sf);
           hasBody = true;
+        } else if (sf.endsWith("_plan.md")) {
+          planFile = sf;
         }
       }
       if (!hasBody && planFile && includeDrafts) {
