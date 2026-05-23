@@ -100,10 +100,17 @@ function transform(md: string, assetsRelDir: string): TransformResult {
   let tableIdx = 0;
   let serial = 0;
   let convertedTables = 0;
+  // 直前に <!-- note-image --> マーカーがあったテーブルは、列数に関わらず画像化する
+  let forceImageNextTable = false;
   const images: ImageSpec[] = [];
   const out: string[] = [];
 
   for (const token of tokens) {
+    if (token.type === "html" && /note-image/.test(token.raw)) {
+      // マーカーコメント自体は note_full に出力しない
+      forceImageNextTable = true;
+      continue;
+    }
     if (token.type === "heading") {
       const h = token as Tokens.Heading;
       currentHeading = stripMdInline(h.text);
@@ -144,7 +151,9 @@ function transform(md: string, assetsRelDir: string): TransformResult {
     if (token.type === "table") {
       const table = token as Tokens.Table;
       const cols = table.header.length;
-      if (cols <= 3) {
+      const forceImage = forceImageNextTable;
+      forceImageNextTable = false;
+      if (cols <= 3 && !forceImage) {
         out.push(tableToList(table));
         convertedTables++;
       } else {
