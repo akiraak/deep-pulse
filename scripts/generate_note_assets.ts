@@ -11,6 +11,10 @@
 //      - テーブル → 4 列以上は画像化、3 列以下は箇条書きに変換
 //   3. Playwright で dist_site/articles/<記事名>.html を開き、要素ごとに PNG を保存
 //   4. _note_full.md と note_assets/README.md を出力
+//
+// 画像参照は `[画像挿入: <filename>]` という視認性重視のプレーンテキスト形式で出力する。
+// note のリッチテキストエディタは Markdown 画像記法を解釈しないため、貼り付け後も
+// 目視で位置を見つけて手動アップロードできるよう、テキストとして残す。
 
 import { readFile, writeFile, mkdir, access } from "fs/promises";
 import path from "path";
@@ -118,7 +122,7 @@ function transform(md: string, assetsRelDir: string): TransformResult {
           domIndex: mermaidIdx,
         });
         mermaidIdx++;
-        out.push(`![](${assetsRelDir}/${filename})\n\n`);
+        out.push(`[画像挿入: ${filename}]\n\n`);
         continue;
       }
       if (code.lang === "chart") {
@@ -131,7 +135,7 @@ function transform(md: string, assetsRelDir: string): TransformResult {
           domIndex: chartIdx,
         });
         chartIdx++;
-        out.push(`![](${assetsRelDir}/${filename})\n\n`);
+        out.push(`[画像挿入: ${filename}]\n\n`);
         continue;
       }
       out.push(token.raw);
@@ -152,7 +156,7 @@ function transform(md: string, assetsRelDir: string): TransformResult {
           nearHeading: currentHeading,
           domIndex: tableIdx,
         });
-        out.push(`![](${assetsRelDir}/${filename})\n\n`);
+        out.push(`[画像挿入: ${filename}]\n\n`);
       }
       tableIdx++;
       continue;
@@ -213,12 +217,13 @@ function generateReadme(images: ImageSpec[], baseName: string): string {
   const lines: string[] = [];
   lines.push(`# note アップロード用画像（${baseName}）`);
   lines.push("");
-  lines.push("`_note_full.md` 内の `![](./note_assets/...)` に対応する PNG ファイルです。");
+  lines.push("`_note_full.md` 内の `[画像挿入: ...]` プレースホルダに対応する PNG ファイルです。");
   lines.push("");
   lines.push("**手順:**");
   lines.push("");
   lines.push("1. `_note_full.md` の本文を note エディタに貼り付ける");
-  lines.push("2. 各画像参照の位置で、このフォルダから対応する PNG をドラッグ＆ドロップする");
+  lines.push("2. 本文中の `[画像挿入: xx.png]` の行を探し、その位置で対応する PNG をドラッグ＆ドロップする");
+  lines.push("3. 挿入後、プレースホルダ行（`[画像挿入: xx.png]`）を削除する");
   lines.push("");
   if (images.length === 0) {
     lines.push("（画像化対象なし）");

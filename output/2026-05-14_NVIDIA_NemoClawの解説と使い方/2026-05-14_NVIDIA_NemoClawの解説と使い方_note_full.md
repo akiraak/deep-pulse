@@ -32,7 +32,7 @@ NemoClaw を理解するうえで最初につまずく場所は、**似たよう
 
 公式ドキュメントの図を日本語化すると、上下関係はこうなる。
 
-![](./note_assets/01_mermaid_NemoClaw_OpenShell_O.png)
+[画像挿入: 01_mermaid_NemoClaw_OpenShell_O.png]
 
 
 
@@ -68,7 +68,7 @@ NemoClaw が提供する答えは、**最初から鍵がかかった部屋にエ
 
 [公式の High-Level Component Diagram](https://docs.nvidia.com/nemoclaw/latest/about/how-it-works.html) を日本語化して並べると、NemoClaw 構成の登場物は7つに整理できる。
 
-![](./note_assets/02_mermaid_アーキテクチャ_—_コンポーネント図で全.png)
+[画像挿入: 02_mermaid_アーキテクチャ_—_コンポーネント図で全.png]
 
 
 
@@ -192,7 +192,7 @@ curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash
 
 ウィザードの最初の質問が一番重要なので、ここで一覧表にしておく。
 
-![](./note_assets/03_table_推論プロバイダ8種.png)
+[画像挿入: 03_table_推論プロバイダ8種.png]
 
 迷ったときの目安はこうだ。
 
