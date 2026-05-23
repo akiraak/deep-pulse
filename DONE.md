@@ -21,3 +21,4 @@
 - [x] output の各mdファイルが見れる管理画面を作る。既存のサーバーとは別 → [plans/output-files-viewer.md](plans/output-files-viewer.md)
 - [x] adminの構成を変更（個別記事ワークスペース化）。記事一覧画面 → 個別記事の画面: 左ペインに各md/ファイルへのリンク、右ペインにファイル中身表示（初期は最終生成の記事） → [plans/admin-article-workspace.md](plans/admin-article-workspace.md)
 - [x] note 投稿用の md ファイル生成機能を作る（mermaid/chart/4列以上のテーブルを Playwright で PNG 化、3列以下のテーブルは箇条書きに変換） [プラン](plans/note-export.md)
+- [x] SpaceX の Form S-1 を読み解く [プラン](output/2026-05-23_SpaceX_S-1を読み解く/2026-05-23_SpaceX_S-1を読み解く_plan.md)
