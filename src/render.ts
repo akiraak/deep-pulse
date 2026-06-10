@@ -255,6 +255,60 @@ const CSS = `
     th, td { padding: 0.4rem 0.55rem; }
     pre { font-size: 0.72rem; padding: 0.8rem 1rem; }
   }
+  /* 多階層記事: 章ナビ（サイドバー） */
+  .toc li.toc-part {
+    font-weight: 700; text-transform: none; letter-spacing: 0.02em;
+    color: #8b0000; margin-top: 0.6rem; padding: 0.3rem 0 0.15rem;
+    border-bottom: 1px solid #c0b9a8; font-size: 0.8rem;
+  }
+  .toc li.toc-chapter { padding: 0.3rem 0; }
+  .toc li.toc-chapter.active > a { color: #8b0000; font-weight: 700; }
+  .toc li.toc-sub { padding: 0.2rem 0 0.2rem 1rem; border-bottom: none; font-size: 0.78rem; }
+  .toc li.toc-sub.toc-h3 { padding-left: 1.8rem; color: #777; }
+  /* 多階層記事: 扉ページの章目次 */
+  .chapter-index { margin: 2rem 0; }
+  .chapter-index-title {
+    font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    border-top: 2px solid #2c2c2c; border-bottom: 1px solid #2c2c2c;
+    padding: 0.4rem 0; margin-bottom: 0.8rem; font-size: 1.3rem;
+  }
+  .chapter-index ol { list-style: none; margin: 0; padding: 0; counter-reset: chap; }
+  .chapter-index li.ci-part {
+    font-weight: 700; color: #8b0000; margin: 1.2rem 0 0.4rem;
+    font-size: 1.02rem; font-style: italic; text-indent: 0;
+  }
+  .chapter-index li.ci-chapter {
+    counter-increment: chap; padding: 0.5rem 0;
+    border-bottom: 1px solid #d5cfc0; text-indent: 0;
+  }
+  .chapter-index li.ci-chapter a { font-weight: 700; border-bottom: none; }
+  .chapter-index li.ci-chapter a:hover { color: #8b0000; }
+  .chapter-index li.ci-chapter::before {
+    content: counter(chap, decimal-leading-zero) ". ";
+    color: #8b0000; font-weight: 700; margin-right: 0.3em;
+  }
+  .chapter-index-cta { text-align: right; margin-top: 1rem; text-indent: 0; }
+  /* 多階層記事: 前後リンク */
+  .chapter-nav {
+    display: flex; justify-content: space-between; gap: 1rem;
+    margin: 2.5rem 0 1rem; padding-top: 1rem; border-top: 1px solid #c0b9a8;
+  }
+  .chapter-nav a {
+    flex: 1; border-bottom: none; font-weight: 700; line-height: 1.4;
+    padding: 0.6rem 0.9rem; border: 1px solid #d5cfc0; border-radius: 6px;
+    background: rgba(44,44,44,0.02);
+  }
+  .chapter-nav a:hover { color: #8b0000; border-color: #8b0000; }
+  .chapter-nav a.next { text-align: right; }
+  .chapter-nav .nav-label {
+    display: block; font-size: 0.72rem; color: #777; font-weight: 400; font-style: italic;
+  }
+  .chapter-nav .nav-spacer { flex: 1; }
+  .chapter-kicker {
+    text-align: center; font-size: 0.8rem; letter-spacing: 0.08em;
+    color: #8b0000; text-transform: uppercase; margin-bottom: 0.3rem;
+    font-style: italic; text-indent: 0;
+  }
 `;
 
 interface WrapOptions {
@@ -265,9 +319,11 @@ interface WrapOptions {
   description?: string;
   ogUrl?: string;
   tocHtml?: string;
+  /** 本文末尾に挿入するフッター（章ページの前後リンクなど） */
+  footerHtml?: string;
 }
 
-function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl, tocHtml }: WrapOptions): string {
+function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl, tocHtml, footerHtml }: WrapOptions): string {
   const breadcrumbHtml = breadcrumb
     ? `<div class="breadcrumb"><a href="${indexHref}">記事一覧</a><span class="sep">/</span>${breadcrumb}</div>`
     : "";
@@ -277,6 +333,7 @@ function wrapHtml({ title, body, indexHref = "/", breadcrumb, description, ogUrl
 
   const hasSidebar = Boolean(tocHtml);
   const bodyClass = hasSidebar ? ' class="has-sidebar"' : "";
+  const footer = footerHtml ?? "";
   const mainHtml = hasSidebar
     ? `<div class="layout">
   <aside class="sidebar">
@@ -284,9 +341,10 @@ ${tocHtml}
   </aside>
   <main class="article-main">
 ${body}
+${footer}
   </main>
 </div>`
-    : body;
+    : body + footer;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -480,6 +538,146 @@ async function resolveArticlePath(filename: string): Promise<string | null> {
   return null;
 }
 
+// --- 多階層記事（複数ページ構成） ---
+
+/** 章ファイルの情報 */
+export interface ChapterEntry {
+  /** ファイル名（例: "01_章タイトル.md"） */
+  filename: string;
+  /** 拡張子を除いたスラッグ（URL に使用。例: "01_章タイトル"） */
+  slug: string;
+  /** 章タイトル（frontmatter title → 本文 H1 → ファイル名 の順で解決） */
+  title: string;
+  /** 編グループ名（frontmatter part。任意） */
+  part?: string;
+  /** 0 始まりの並び順 */
+  index: number;
+}
+
+/** YAML フロントマターを分離して part / title と本文を返す */
+function stripFrontmatter(content: string): {
+  part?: string;
+  title?: string;
+  body: string;
+} {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!match) return { body: content };
+  const yaml = match[1];
+  const part = yaml.match(/^part:\s*(.+)$/m)?.[1]?.trim();
+  const title = yaml.match(/^title:\s*(.+)$/m)?.[1]?.trim();
+  return { part, title, body: content.slice(match[0].length) };
+}
+
+/** 記事の `chapters/` 配下の章ファイルを連番順に列挙する。
+ *
+ * `chapters/` が無い（= 単一ページ記事）場合は空配列を返す。
+ */
+export async function listChapters(base: string): Promise<ChapterEntry[]> {
+  if (!base || base.includes("..") || base.includes("/")) return [];
+  const dir = path.join(OUTPUT_DIR, base, "chapters");
+  let files: string[];
+  try {
+    files = (await readdir(dir)).filter((f) => f.endsWith(".md"));
+  } catch {
+    return [];
+  }
+  files.sort();
+  const entries: ChapterEntry[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const filename = files[i];
+    let content = "";
+    try {
+      content = await readFile(path.join(dir, filename), "utf-8");
+    } catch {
+      // 読めない章はスキップせずファイル名で表示
+    }
+    const fm = stripFrontmatter(content);
+    const h1 = fm.body.match(/^#\s+(.+)$/m)?.[1]?.trim();
+    const slug = filename.replace(/\.md$/, "");
+    entries.push({
+      filename,
+      slug,
+      title: fm.title ?? h1 ?? slug,
+      part: fm.part,
+      index: i,
+    });
+  }
+  return entries;
+}
+
+/** サイドバー用の章ナビ HTML を生成。
+ *
+ * - 編（part）が変わるごとにグループ見出しを立てる
+ * - `currentSlug` の章をハイライトし、その直下に現在章の節・項（H2/H3）を展開する
+ */
+function buildChapterNav(
+  chapters: ChapterEntry[],
+  chapterHref: (slug: string) => string,
+  currentSlug: string | null,
+  currentHeadings: CollectedHeading[],
+): string {
+  let lastPart: string | undefined;
+  const items: string[] = [];
+  for (const ch of chapters) {
+    if (ch.part && ch.part !== lastPart) {
+      items.push(`<li class="toc-part">${escapeHtml(ch.part)}</li>`);
+      lastPart = ch.part;
+    } else if (!ch.part) {
+      lastPart = undefined;
+    }
+    const active = ch.slug === currentSlug;
+    items.push(
+      `<li class="toc-chapter${active ? " active" : ""}"><a href="${chapterHref(ch.slug)}">${escapeHtml(ch.title)}</a></li>`,
+    );
+    if (active) {
+      for (const h of currentHeadings) {
+        const cls = h.level === 3 ? "toc-sub toc-h3" : "toc-sub toc-h2";
+        items.push(`<li class="${cls}"><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`);
+      }
+    }
+  }
+  return `<nav class="toc"><div class="toc-title">目次</div><ul>${items.join("\n")}</ul></nav>`;
+}
+
+/** 扉ページ本文に挿入する章目次 HTML を生成 */
+function buildChapterIndex(
+  chapters: ChapterEntry[],
+  chapterHref: (slug: string) => string,
+): string {
+  let lastPart: string | undefined;
+  const items: string[] = [];
+  for (const ch of chapters) {
+    if (ch.part && ch.part !== lastPart) {
+      items.push(`<li class="ci-part">${escapeHtml(ch.part)}</li>`);
+      lastPart = ch.part;
+    } else if (!ch.part) {
+      lastPart = undefined;
+    }
+    items.push(
+      `<li class="ci-chapter"><a href="${chapterHref(ch.slug)}">${escapeHtml(ch.title)}</a></li>`,
+    );
+  }
+  const first = chapters[0];
+  return `<nav class="chapter-index"><div class="chapter-index-title">目次</div><ol>${items.join("\n")}</ol><p class="chapter-index-cta"><a href="${chapterHref(first.slug)}">最初の章を読む →</a></p></nav>`;
+}
+
+interface NavTarget {
+  href: string;
+  label: string;
+  title: string;
+}
+
+/** 章ページの前後リンク（フッター）HTML を生成 */
+function buildChapterFooter(prev: NavTarget | null, next: NavTarget | null): string {
+  const prevHtml = prev
+    ? `<a class="prev" href="${prev.href}"><span class="nav-label">← ${escapeHtml(prev.label)}</span>${escapeHtml(prev.title)}</a>`
+    : `<span class="nav-spacer"></span>`;
+  const nextHtml = next
+    ? `<a class="next" href="${next.href}"><span class="nav-label">${escapeHtml(next.label)} →</span>${escapeHtml(next.title)}</a>`
+    : `<span class="nav-spacer"></span>`;
+  return `<nav class="chapter-nav">${prevHtml}${nextHtml}</nav>`;
+}
+
 /** 記事一覧の HTML を生成 */
 export async function renderIndex(
   basePath = "/articles",
@@ -510,11 +708,31 @@ export async function renderIndex(
   });
 }
 
-/** 個別記事の HTML を生成 */
+/** h1 タイトル（とサブタイトル blockquote）の直後にブロックを挿入する */
+function insertAfterH1(html: string, insertion: string): string {
+  const h1End = html.indexOf("</h1>");
+  if (h1End === -1) return insertion + html;
+  const afterH1 = h1End + "</h1>".length;
+  // h1 直後の blockquote（サブタイトル）をスキップ
+  const rest = html.slice(afterH1);
+  const bqMatch = rest.match(/^\s*<blockquote>[\s\S]*?<\/blockquote>/);
+  const insertPos = afterH1 + (bqMatch ? bqMatch[0].length : 0);
+  return html.slice(0, insertPos) + insertion + html.slice(insertPos);
+}
+
+/** 個別記事の HTML を生成
+ *
+ * `chapters/` を持つ記事の場合は「扉ページ（記事インデックス）」として描画し、
+ * 本文の後に章目次を、サイドバーに章ナビを表示する。
+ *
+ * @param articlesRoot 現在のページから `articles/` コレクションへの URL プレフィックス。
+ *   省略時は indexHref から推定する（動的サーバー: "/articles/" / 静的ビルド: "./"）。
+ */
 export async function renderArticle(
   filename: string,
   indexHref = "/",
   audioSrc?: string,
+  articlesRoot?: string,
 ): Promise<string | null> {
   const filePath = await resolveArticlePath(filename);
   if (!filePath) return null;
@@ -525,6 +743,8 @@ export async function renderArticle(
     return null;
   }
 
+  const root = articlesRoot ?? (indexHref === "/" ? "/articles/" : "./");
+  const base = filename.replace(/\.md$/, "");
   const articleTitle = (await extractTitle(filePath)) ?? filename;
   const description = extractDescription(md);
   const htmlName = filename.replace(/\.md$/, ".html");
@@ -534,29 +754,28 @@ export async function renderArticle(
   collectedHeadings = [];
   let html = await marked(md);
 
-  const tocHtml = buildToc(collectedHeadings);
+  // 多階層記事: chapters/ があれば章目次を本文に追加し、サイドバーを章ナビにする
+  const chapters = await listChapters(base);
+  let sidebarToc = buildToc(collectedHeadings);
+  let mobileToc = sidebarToc;
+  if (chapters.length > 0) {
+    const chapterHref = (slug: string) =>
+      `${root}${encodeURIComponent(base)}/${encodeURIComponent(slug)}.html`;
+    sidebarToc = buildChapterNav(chapters, chapterHref, null, []);
+    mobileToc = ""; // 章目次を本文に出すのでモバイルでの重複は避ける
+    html += buildChapterIndex(chapters, chapterHref);
+  }
 
   // 音声プレイヤー / モバイル用目次を h1 タイトル直下に挿入
   const blocks: string[] = [];
   if (audioSrc) {
     blocks.push(`<div class="audio-player"><span class="audio-label">音声で聴く</span><audio controls preload="none" src="${audioSrc}"></audio></div>`);
   }
-  if (tocHtml) {
-    blocks.push(`<div class="toc-mobile">${tocHtml}</div>`);
+  if (mobileToc) {
+    blocks.push(`<div class="toc-mobile">${mobileToc}</div>`);
   }
   if (blocks.length > 0) {
-    const insertion = "\n" + blocks.join("\n") + "\n";
-    const h1End = html.indexOf("</h1>");
-    if (h1End !== -1) {
-      const afterH1 = h1End + "</h1>".length;
-      // h1 直後の blockquote（サブタイトル）をスキップ
-      const rest = html.slice(afterH1);
-      const bqMatch = rest.match(/^\s*<blockquote>[\s\S]*?<\/blockquote>/);
-      const insertPos = afterH1 + (bqMatch ? bqMatch[0].length : 0);
-      html = html.slice(0, insertPos) + insertion + html.slice(insertPos);
-    } else {
-      html = insertion + html;
-    }
+    html = insertAfterH1(html, "\n" + blocks.join("\n") + "\n");
   }
 
   return wrapHtml({
@@ -566,6 +785,107 @@ export async function renderArticle(
     breadcrumb: articleTitle,
     description,
     ogUrl,
-    tocHtml,
+    tocHtml: sidebarToc,
+  });
+}
+
+/** 多階層記事の章ページ HTML を生成
+ *
+ * @param base   記事ディレクトリ名（記事ファイル名から `.md` を除いたもの）
+ * @param chapterFilename `chapters/` 内の章ファイル名（例: "01_章タイトル.md"）
+ */
+export async function renderChapter(
+  base: string,
+  chapterFilename: string,
+  opts: { listHref?: string; articlesRoot?: string } = {},
+): Promise<string | null> {
+  const listHref = opts.listHref ?? "/";
+  const root = opts.articlesRoot ?? "/articles/";
+
+  if (base.includes("..") || base.includes("/")) return null;
+  if (
+    !chapterFilename.endsWith(".md") ||
+    chapterFilename.includes("..") ||
+    chapterFilename.includes("/")
+  ) {
+    return null;
+  }
+
+  const chapters = await listChapters(base);
+  const idx = chapters.findIndex((c) => c.filename === chapterFilename);
+  if (idx === -1) return null;
+  const current = chapters[idx];
+
+  const chapterPath = path.join(OUTPUT_DIR, base, "chapters", chapterFilename);
+  let raw: string;
+  try {
+    raw = await readFile(chapterPath, "utf-8");
+  } catch {
+    return null;
+  }
+  const { body: mdBody } = stripFrontmatter(raw);
+
+  // 記事タイトル（扉ページの H1）
+  const articlePath = await resolveArticlePath(`${base}.md`);
+  const articleTitle =
+    (articlePath ? await extractTitle(articlePath) : null) ?? base;
+
+  chartCounter = 0;
+  mermaidCounter = 0;
+  collectedHeadings = [];
+  let html = await marked(mdBody);
+
+  const chapterHref = (slug: string) =>
+    `${root}${encodeURIComponent(base)}/${encodeURIComponent(slug)}.html`;
+  const articleHref = `${root}${encodeURIComponent(base)}.html`;
+
+  const sidebarToc = buildChapterNav(
+    chapters,
+    chapterHref,
+    current.slug,
+    collectedHeadings,
+  );
+
+  // 記事タイトルを kicker として h1 直前に、モバイル用章ナビを h1 直後に挿入
+  const h1Start = html.indexOf("<h1");
+  const kicker = `<p class="chapter-kicker">${escapeHtml(articleTitle)}</p>\n`;
+  html =
+    h1Start === -1
+      ? kicker + html
+      : html.slice(0, h1Start) + kicker + html.slice(h1Start);
+  html = insertAfterH1(html, `\n<div class="toc-mobile">${sidebarToc}</div>\n`);
+
+  // 前後リンク
+  const prev: NavTarget =
+    idx > 0
+      ? {
+          href: chapterHref(chapters[idx - 1].slug),
+          label: "前の章",
+          title: chapters[idx - 1].title,
+        }
+      : { href: articleHref, label: "目次に戻る", title: articleTitle };
+  const next: NavTarget | null =
+    idx < chapters.length - 1
+      ? {
+          href: chapterHref(chapters[idx + 1].slug),
+          label: "次の章",
+          title: chapters[idx + 1].title,
+        }
+      : null;
+  const footerHtml = buildChapterFooter(prev, next);
+
+  const breadcrumb = `<a href="${articleHref}">${escapeHtml(articleTitle)}</a><span class="sep">/</span>${escapeHtml(current.title)}`;
+  const ogUrl = `${SITE_URL}/articles/${encodeURIComponent(base)}/${encodeURIComponent(current.slug)}.html`;
+  const description = extractDescription(mdBody);
+
+  return wrapHtml({
+    title: `${current.title} — ${articleTitle} — deep-pulse`,
+    body: html,
+    indexHref: listHref,
+    breadcrumb,
+    description,
+    ogUrl,
+    tocHtml: sidebarToc,
+    footerHtml,
   });
 }

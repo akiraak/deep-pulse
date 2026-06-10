@@ -3,7 +3,13 @@
 
 import { mkdir, writeFile, copyFile, access } from "fs/promises";
 import path from "path";
-import { renderIndex, renderArticle, listArticles } from "../src/render.js";
+import {
+  renderIndex,
+  renderArticle,
+  renderChapter,
+  listArticles,
+  listChapters,
+} from "../src/render.js";
 
 const DIST = path.resolve("dist_site");
 const ARTICLES_DIR = path.join(DIST, "articles");
@@ -34,11 +40,28 @@ async function build() {
       // 音声ファイルなし — スキップ
     }
 
-    const html = await renderArticle(article.filename, "../", audioSrc);
+    const html = await renderArticle(article.filename, "../", audioSrc, "./");
     if (html) {
       const outName = baseName + ".html";
       await writeFile(path.join(ARTICLES_DIR, outName), html, "utf-8");
       console.log(`生成: articles/${outName}`);
+    }
+
+    // 多階層記事: chapters/ があれば各章を articles/<base>/<slug>.html に出力
+    const chapters = await listChapters(baseName);
+    if (chapters.length > 0) {
+      const chapterDir = path.join(ARTICLES_DIR, baseName);
+      await mkdir(chapterDir, { recursive: true });
+      for (const ch of chapters) {
+        const chHtml = await renderChapter(baseName, ch.filename, {
+          listHref: "../../",
+          articlesRoot: "../",
+        });
+        if (chHtml) {
+          await writeFile(path.join(chapterDir, ch.slug + ".html"), chHtml, "utf-8");
+          console.log(`生成: articles/${baseName}/${ch.slug}.html`);
+        }
+      }
     }
   }
 

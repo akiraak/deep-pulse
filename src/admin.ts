@@ -435,6 +435,7 @@ async function handleArticleList(res: http.ServerResponse): Promise<void> {
 
 type WorkspaceFile =
   | { kind: "body"; label: string; param: string }
+  | { kind: "chapter"; label: string; param: string }
   | { kind: "plan"; label: string; param: string }
   | { kind: "note"; label: string; param: string }
   | { kind: "source"; label: string; param: string };
@@ -489,6 +490,21 @@ async function listWorkspaceFiles(
   noteFiles.forEach((f, i) => {
     files.push({ kind: "note", label: f, param: i === 0 ? "note" : f });
   });
+
+  // chapters は新形式（サブディレクトリ）でのみ存在
+  if (dir !== OUTPUT_DIR) {
+    const chaptersDir = path.join(dir, "chapters");
+    try {
+      const entries = (await readdir(chaptersDir))
+        .filter((f) => f.endsWith(".md"))
+        .sort();
+      for (const cf of entries) {
+        files.push({ kind: "chapter", label: cf, param: `chapters/${cf}` });
+      }
+    } catch {
+      // no chapters dir
+    }
+  }
 
   // sources は新形式（サブディレクトリ）でのみ存在
   if (dir !== OUTPUT_DIR) {
@@ -570,6 +586,7 @@ async function handleArticleWorkspace(
   };
 
   const bodyFiles = ws.files.filter((f) => f.kind === "body");
+  const chapterFiles = ws.files.filter((f) => f.kind === "chapter");
   const planFiles = ws.files.filter((f) => f.kind === "plan");
   const noteFiles = ws.files.filter((f) => f.kind === "note");
   const sourceFiles = ws.files.filter((f) => f.kind === "source");
@@ -578,6 +595,12 @@ async function handleArticleWorkspace(
   if (bodyFiles.length > 0) {
     navParts.push(`<div class="ws-group-title">記事</div>`);
     for (const f of bodyFiles) navParts.push(linkItem(f));
+  }
+  if (chapterFiles.length > 0) {
+    navParts.push(
+      `<div class="ws-group-title">章 <span class="ws-badge">${chapterFiles.length}</span></div>`,
+    );
+    for (const f of chapterFiles) navParts.push(linkItem(f));
   }
   if (planFiles.length > 0) {
     navParts.push(`<div class="ws-group-title">プラン</div>`);
@@ -638,6 +661,27 @@ async function handleArticleRender(
 
   const url = new URL(req.url ?? "/", "http://localhost");
   const fileQuery = url.searchParams.get("file") ?? "body";
+
+  // chapters/<name> — 公開サイトと同じ章ページ HTML をそのまま流す
+  if (fileQuery.startsWith("chapters/")) {
+    const chapterName = fileQuery.slice("chapters/".length);
+    if (!chapterName || chapterName.includes("..") || chapterName.includes("/")) {
+      send(res, 400, miniHtml("Bad Request", '<div class="alert alert-error">不正なリクエスト</div>'));
+      return;
+    }
+    const base = path.basename(dir);
+    const { renderChapter } = await import("./render.js");
+    const html = await renderChapter(base, chapterName, {
+      listHref: "/articles",
+      articlesRoot: "/articles/",
+    });
+    if (!html) {
+      send(res, 404, miniHtml("Not Found", '<div class="alert alert-error">章が見つかりません</div>'));
+      return;
+    }
+    send(res, 200, html);
+    return;
+  }
 
   // sources/<name>
   if (fileQuery.startsWith("sources/")) {

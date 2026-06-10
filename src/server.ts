@@ -5,7 +5,7 @@ import http from "http";
 import { readFile } from "fs/promises";
 import { access } from "fs/promises";
 import path from "path";
-import { renderIndex, renderArticle } from "./render.js";
+import { renderIndex, renderArticle, renderChapter } from "./render.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
 
@@ -27,6 +27,30 @@ const server = http.createServer(async (req, res) => {
     // 記事一覧
     if (pathname === "/") {
       const html = await renderIndex();
+      send(res, 200, html);
+      return;
+    }
+
+    // 多階層記事の章ページ: /articles/<base>/<chapter>
+    const chapterMatch = pathname.match(/^\/articles\/([^/]+)\/([^/]+)$/);
+    if (chapterMatch) {
+      const base = chapterMatch[1];
+      let chapter = chapterMatch[2];
+      if (chapter.endsWith(".html")) {
+        chapter = chapter.replace(/\.html$/, ".md");
+      }
+      if (base.includes("..") || chapter.includes("..")) {
+        send(res, 400, "不正なリクエストです");
+        return;
+      }
+      const html = await renderChapter(base, chapter, {
+        listHref: "/",
+        articlesRoot: "/articles/",
+      });
+      if (!html) {
+        send(res, 404, "記事が見つかりません");
+        return;
+      }
       send(res, 200, html);
       return;
     }
