@@ -176,6 +176,27 @@ const CSS = `
     font-family: Georgia, serif; font-size: 1rem; line-height: normal;
   }
   .mermaid-wrapper { text-align: center; }
+  .mermaid-wrapper svg { cursor: zoom-in; }
+  /* 図のクリック拡大表示（ライトボックス） */
+  .dp-lightbox {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(28,28,28,0.85);
+    align-items: center; justify-content: center; padding: 3vmin;
+  }
+  .dp-lightbox.open { display: flex; }
+  .dp-lightbox-inner {
+    background: #faf8f0; border: 1px solid #8b0000; border-radius: 6px;
+    padding: 2vmin; max-width: 96vw; max-height: 94vh; overflow: auto;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+  }
+  .dp-lightbox-inner svg { cursor: zoom-out; max-width: none; height: auto; }
+  .dp-lightbox-close {
+    position: fixed; top: 12px; right: 20px; z-index: 1001;
+    font-size: 2.4rem; line-height: 1; color: #faf8f0; cursor: pointer;
+    width: 44px; height: 44px; text-align: center;
+    font-family: Georgia, serif; user-select: none;
+  }
+  .dp-lightbox-close:hover { color: #8b0000; }
   .article-list { list-style: none; padding: 0; }
   .article-list li { padding: 14px 0; border-bottom: 1px solid #c0b9a8; }
   .article-list .date { color: #777; margin-right: 10px; font-size: 0.9em; font-style: italic; }
@@ -376,6 +397,40 @@ ${footer}
   ${breadcrumbHtml}
 </header>
 ${mainHtml}
+<div id="dp-lightbox" class="dp-lightbox" role="dialog" aria-modal="true">
+  <span class="dp-lightbox-close" aria-label="閉じる">×</span>
+  <div class="dp-lightbox-inner"></div>
+</div>
+<script>
+(function(){
+  var box = document.getElementById('dp-lightbox');
+  if (!box) return;
+  var inner = box.querySelector('.dp-lightbox-inner');
+  function open(svg){
+    inner.innerHTML = '';
+    var clone = svg.cloneNode(true);
+    var vb = svg.viewBox && svg.viewBox.baseVal;
+    var w = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    var h = vb && vb.height ? vb.height : svg.getBoundingClientRect().height;
+    if (w > 0 && h > 0) {
+      var scale = Math.min(window.innerWidth * 0.92 / w, window.innerHeight * 0.88 / h);
+      clone.style.width = (w * scale) + 'px';
+      clone.style.height = (h * scale) + 'px';
+      clone.style.maxWidth = 'none';
+    }
+    inner.appendChild(clone);
+    box.classList.add('open');
+  }
+  function close(){ box.classList.remove('open'); inner.innerHTML = ''; }
+  document.addEventListener('click', function(e){
+    if (!e.target.closest) return;
+    if (e.target.closest('.dp-lightbox')) { close(); return; }
+    var svg = e.target.closest('.mermaid-wrapper svg');
+    if (svg) open(svg);
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+})();
+</script>
 </body>
 </html>`;
 }
