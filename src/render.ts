@@ -107,8 +107,10 @@ const CSS = `
   }
   h1 {
     font-size: 2.4rem; font-weight: 900; line-height: 1.15;
-    text-align: center; margin-bottom: 0.3rem; letter-spacing: 0.04em;
+    text-align: center; margin-bottom: 2.5rem; letter-spacing: 0.04em;
   }
+  /* サブタイトル（字幕 blockquote）がある場合は、余白は字幕の下に置くためタイトルと近接させる */
+  h1:has(+ blockquote) { margin-bottom: 0.3rem; }
   h1 + blockquote {
     text-align: center; border: none; background: none;
     color: #777; font-style: italic; padding: 0; margin-bottom: 1.5rem;
