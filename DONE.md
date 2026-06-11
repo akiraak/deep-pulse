@@ -10,6 +10,7 @@
 - [x] push 時に GitHub Pages で記事サイトを自動生成・デプロイする
 - [x] データセンターのレーザーとCoherent社の記事を生成する
 - [x] スティーヴン・キング全作品ガイドの記事を生成する（全作品・シリーズ優先・ネタバレ控えめ＋日本語版の有無） → [プラン](output/2026-06-10_スティーヴン・キング全作品ガイド/2026-06-10_スティーヴン・キング全作品ガイド_plan.md)
+- [x] SpaceX 史上最大のIPO（多階層・全8章）の記事を生成する（SEC S-1/A目論見書の読み解き・財務分析重視・全11グラフ） → [プラン](output/2026-06-11_SpaceX史上最大のIPO/2026-06-11_SpaceX史上最大のIPO_plan.md)
 - [x] 記事配信サーバーと管理画面サーバーを分離する（`./server.sh` と `./admin.sh` で別々に起動）
 - [x] `_note.md` ファイルを記事一覧から除外する（render.ts 修正 + CLAUDE.md 更新）
 - [x] 管理画面（admin panel）の実装 → [plans/admin-panel.md](plans/admin-panel.md)
